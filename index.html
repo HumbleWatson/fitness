@@ -158,6 +158,34 @@
             padding: 8px 0;
         }
 
+        .assisted-label {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            white-space: nowrap;
+            padding: 4px 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .assisted-label:hover {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .assisted-label input {
+            width: 14px;
+            height: 14px;
+            accent-color: #4ECDC4;
+        }
+
+        .assisted-label:has(input:checked) {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ECDC4;
+        }
+
         .remove-set-btn {
             width: 32px;
             height: 32px;
@@ -377,6 +405,17 @@
             align-items: center;
             gap: 12px;
             color: rgba(255,255,255,0.5);
+            flex-wrap: wrap;
+        }
+
+        .assisted-tag {
+            display: inline-block;
+            padding: 2px 8px;
+            background: rgba(78, 205, 196, 0.2);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 4px;
+            font-size: 11px;
+            color: #4ECDC4;
         }
 
         .delete-btn {
@@ -707,6 +746,10 @@
                 <input type="number" placeholder="次数" class="reps-input">
                 <span class="set-label">×</span>
                 <input type="number" placeholder="组数" class="sets-input" value="1">
+                <label class="assisted-label">
+                    <input type="checkbox" class="assisted-check">
+                    <span>辅助</span>
+                </label>
                 <button class="remove-set-btn" onclick="removeSet(this)" style="display:none">×</button>
             </div>
         </div>
@@ -772,6 +815,7 @@
                 6.1<br>
                 深蹲 26kg 12x3<br>
                 腿倒蹬 59kg 12x1 66kg 12x3<br>
+                引体 41kg 辅助 8x4<br>
                 二头 6kg 15x4
             </div>
             <div id="previewSection" class="preview-section" style="display:none"></div>
@@ -979,6 +1023,10 @@
                 <input type="number" placeholder="次数" class="reps-input">
                 <span class="set-label">×</span>
                 <input type="number" placeholder="组数" class="sets-input" value="1">
+                <label class="assisted-label">
+                    <input type="checkbox" class="assisted-check">
+                    <span>辅助</span>
+                </label>
                 <button class="remove-set-btn" onclick="removeSet(this)">×</button>
             `;
             container.appendChild(newRow);
@@ -1005,20 +1053,28 @@
                 const weight = parseFloat(row.querySelector('.weight-input').value) || 0;
                 const reps = parseInt(row.querySelector('.reps-input').value) || 0;
                 const setCount = parseInt(row.querySelector('.sets-input').value) || 1;
+                const assisted = row.querySelector('.assisted-check')?.checked || false;
                 if (weight > 0 && reps > 0) {
-                    result.push({ weight, reps, sets: setCount });
+                    result.push({ weight, reps, sets: setCount, assisted });
                 }
             });
             return result;
         }
 
-        function formatSets(sets) {
+        function formatSets(sets, showTag = false) {
             if (!sets || sets.length === 0) return '';
             return sets.map(s => {
+                const prefix = s.assisted ? '辅助 ' : '';
+                let text;
                 if (s.sets === 1) {
-                    return `${s.weight}kg ${s.reps}次`;
+                    text = `${prefix}${s.weight}kg ${s.reps}次`;
+                } else {
+                    text = `${prefix}${s.weight}kg ${s.reps}次×${s.sets}`;
                 }
-                return `${s.weight}kg ${s.reps}次×${s.sets}`;
+                if (showTag && s.assisted) {
+                    text += ' <span class="assisted-tag">辅助</span>';
+                }
+                return text;
             }).join(' / ');
         }
 
@@ -1088,7 +1144,7 @@
                             <div class="exercise-item" data-date="${date}" data-index="${i}">
                                 <span class="exercise-name">${ex.name}</span>
                                 <span class="exercise-detail">
-                                    ${formatSets(ex.sets)}
+                                    ${formatSets(ex.sets, true)}
                                     <button class="delete-btn" onclick="handleDelete(this, '${date}', ${i})">删除</button>
                                 </span>
                             </div>
@@ -1124,6 +1180,10 @@
                     <input type="number" placeholder="次数" class="reps-input">
                     <span class="set-label">×</span>
                     <input type="number" placeholder="组数" class="sets-input" value="1">
+                    <label class="assisted-label">
+                        <input type="checkbox" class="assisted-check">
+                        <span>辅助</span>
+                    </label>
                     <button class="remove-set-btn" onclick="removeSet(this)" style="display:none">×</button>
                 </div>
             `;
@@ -1231,6 +1291,9 @@
             const name = nameMatch[1].replace(/[&＆]/g, ' & ').trim();
             const rest = line.slice(nameMatch[0].length);
 
+            // Detect assisted weight
+            const isAssisted = rest.includes('辅助');
+
             // Parse all weight x reps pairs
             const setPattern = /(\d+(?:\.\d+)?)\s*kg?\s*(\d+)\s*[xX×]\s*(\d+)/g;
             const sets = [];
@@ -1240,7 +1303,8 @@
                 sets.push({
                     weight: parseFloat(match[1]),
                     reps: parseInt(match[2]),
-                    sets: parseInt(match[3])
+                    sets: parseInt(match[3]),
+                    assisted: isAssisted
                 });
             }
 
