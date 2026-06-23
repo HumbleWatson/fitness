@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>数据分析 - 健身日记</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            min-height: 100vh;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(100, 150, 255, 0.25) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(150, 100, 255, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(100, 200, 180, 0.15) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1525 100%);
+            color: #fff;
+            max-width: 430px;
+            margin: 0 auto;
+            padding: 20px 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .nav-link {
+            display: inline-block;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            backdrop-filter: blur(20px);
+            transition: all 0.2s ease;
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filter-btn {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(20px);
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #fff;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(60px) saturate(200%);
+            -webkit-backdrop-filter: blur(60px) saturate(200%);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.2),
+                inset 0 1px 1px rgba(255, 255, 255, 0.35);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+        }
+
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: -80%;
+            left: -20%;
+            width: 140%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.12) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: rgba(255,255,255,0.45);
+            margin-top: 4px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 200px;
+            margin-top: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .muscle-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .muscle-name {
+            width: 50px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .muscle-track {
+            flex: 1;
+            height: 24px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .muscle-fill {
+            height: 100%;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: width 0.5s ease;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+
+        .exercise-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .exercise-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.35);
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1>数据分析</h1>
+        <a href="index.html" class="nav-link">🏋️ 健身日记</a>
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+        <button class="filter-btn" onclick="setFilter('all')">全部</button>
+        <button class="filter-btn active" onclick="setFilter('week')">本周</button>
+        <button class="filter-btn" onclick="setFilter('month')">本月</button>
+        <button class="filter-btn" onclick="setFilter('30days')">近30天</button>
+        <button class="filter-btn" onclick="setFilter('90days')">近3月</button>
+    </div>
+
+    <div class="glass-card">
+        <div class="card-title" id="statsTitle">本周概览</div>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value" id="totalDays">0</div>
+                <div class="stat-label">训练天数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalExercises">0</div>
+                <div class="stat-label">动作次数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalSets">0</div>
+                <div class="stat-label">总组数</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value" id="totalVolume">0</div>
+                <div class="stat-label">总容量(kg)</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-card">
+        <div class="card-title">肌群分布</div>
+        <div id="muscleDistribution"></div>
+    </div>
+
+    <div class="glass-card">
+        <div class="card-title">每日容量趋势</div>
+        <div class="chart-container">
+            <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="glass-card">
+        <div class="card-title">高频动作 TOP 10</div>
+        <div id="topExercises"></div>
+    </div>
+
+    <script>
+        const muscleMap = {
+            '卧推': '胸部', '上斜卧推': '胸部', '下斜卧推': '胸部', '窄距卧推': '胸部',
+            '哑铃飞鸟': '胸部', '龙门架夹胸': '胸部', '俯卧撑': '胸部', '器械推胸': '胸部',
+            '引体向上': '背部', '高位下拉': '背部', '杠铃划船': '背部', '哑铃划船': '背部',
+            '坐姿划船': '背部', '硬拉': '背部', '山羊挺身': '背部', '直臂下压': '背部',
+            '侧平举': '肩部', '前平举': '肩部', '俯身飞鸟': '肩部', '杠铃推举': '肩部',
+            '哑铃推举': '肩部', '阿诺德推举': '肩部', '面拉': '肩部', '耸肩': '肩部',
+            '二头弯举': '手臂', '锤式弯举': '手臂', '集中弯举': '手臂', '三头下压': '手臂',
+            '臂屈伸': '手臂', '过顶臂屈伸': '手臂', '前臂弯举': '手臂',
+            '深蹲': '腿部', '腿举': '腿部', '腿屈伸': '腿部', '腿弯举': '腿部',
+            '罗马尼亚硬拉': '腿部', '保加利亚分腿蹲': '腿部', '小腿提踵': '腿部', '腿倒蹬': '腿部',
+            '平板支撑': '核心', '卷腹': '核心', '俄罗斯转体': '核心', '悬垂举腿': '核心',
+            '仰卧起坐': '核心', '死虫': '核心', '农夫行走': '核心'
+        };
+
+        const muscleColors = {
+            '胸部': '#FF6B6B',
+            '背部': '#4ECDC4',
+            '肩部': '#45B7D1',
+            '手臂': '#96CEB4',
+            '腿部': '#FFEAA7',
+            '核心': '#DDA0DD'
+        };
+
+        const filterTitles = {
+            'all': '全部概览',
+            'week': '本周概览',
+            'month': '本月概览',
+            '30days': '近30天概览',
+            '90days': '近3月概览'
+        };
+
+        let currentFilter = 'week';
+        let volumeChart = null;
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            renderAll();
+        }
+
+        function getFilteredData() {
+            const data = JSON.parse(localStorage.getItem('fitness') || '{}');
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+            if (currentFilter === 'all') return data;
+
+            const filtered = {};
+            Object.entries(data).forEach(([date, exercises]) => {
+                const [y, m, d] = date.split('-').map(Number);
+                const dateObj = new Date(y, m - 1, d);
+
+                let include = false;
+                switch (currentFilter) {
+                    case 'week': {
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        include = dateObj >= weekStart;
+                        break;
+                    }
+                    case 'month':
+                        include = dateObj.getFullYear() === now.getFullYear() && dateObj.getMonth() === now.getMonth();
+                        break;
+                    case '30days': {
+                        const diff = (today - dateObj) / (1000 * 60 * 60 * 24);
+                        include = diff < 30;
+                        break;
+                    }
+                    case '90days': {
+                        const diff = (today - dateObj) / (1000 * 60 * 60 * 24);
+                        include = diff < 90;
+                        break;
+                    }
+                }
+
+                if (include) filtered[date] = exercises;
+            });
+            return filtered;
+        }
+
+        function analyzeData(filteredData) {
+            const dates = Object.keys(filteredData).sort();
+            let totalExercises = 0;
+            let totalSets = 0;
+            let totalVolume = 0;
+            const muscleCount = {};
+            const exerciseCount = {};
+            const dailyVolume = {};
+
+            dates.forEach(date => {
+                dailyVolume[date] = 0;
+                filteredData[date].forEach(ex => {
+                    totalExercises++;
+                    const muscle = muscleMap[ex.name] || '其他';
+                    muscleCount[muscle] = (muscleCount[muscle] || 0) + 1;
+                    exerciseCount[ex.name] = (exerciseCount[ex.name] || 0) + 1;
+
+                    ex.sets.forEach(s => {
+                        totalSets += s.sets;
+                        const vol = s.weight * s.reps * s.sets;
+                        totalVolume += vol;
+                        dailyVolume[date] += vol;
+                    });
+                });
+            });
+
+            return { totalDays: dates.length, totalExercises, totalSets, totalVolume, muscleCount, exerciseCount, dailyVolume, dates };
+        }
+
+        function renderAll() {
+            document.getElementById('statsTitle').textContent = filterTitles[currentFilter];
+            const filteredData = getFilteredData();
+            const stats = analyzeData(filteredData);
+
+            document.getElementById('totalDays').textContent = stats.totalDays;
+            document.getElementById('totalExercises').textContent = stats.totalExercises;
+            document.getElementById('totalSets').textContent = stats.totalSets;
+            document.getElementById('totalVolume').textContent = stats.totalVolume.toLocaleString();
+
+            // Muscle distribution
+            const muscleContainer = document.getElementById('muscleDistribution');
+            const maxMuscle = Math.max(...Object.values(stats.muscleCount), 1);
+            const muscles = ['胸部', '背部', '肩部', '手臂', '腿部', '核心'];
+            muscleContainer.innerHTML = muscles.map(muscle => {
+                const count = stats.muscleCount[muscle] || 0;
+                const pct = (count / maxMuscle) * 100;
+                return `
+                    <div class="muscle-bar">
+                        <span class="muscle-name">${muscle}</span>
+                        <div class="muscle-track">
+                            <div class="muscle-fill" style="width: ${pct}%; background: ${muscleColors[muscle]}40; border-left: 3px solid ${muscleColors[muscle]};">
+                                ${count}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Volume chart
+            if (volumeChart) volumeChart.destroy();
+            const ctx = document.getElementById('volumeChart').getContext('2d');
+            const labels = stats.dates.map(d => d.slice(5));
+            const values = stats.dates.map(d => stats.dailyVolume[d]);
+
+            volumeChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: 'rgba(100, 200, 255, 0.3)',
+                        borderColor: 'rgba(100, 200, 255, 0.8)',
+                        borderWidth: 1,
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                        y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                    }
+                }
+            });
+
+            // Top exercises
+            const topContainer = document.getElementById('topExercises');
+            const sorted = Object.entries(stats.exerciseCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+            if (sorted.length === 0) {
+                topContainer.innerHTML = '<div class="empty-state">暂无数据</div>';
+            } else {
+                topContainer.innerHTML = sorted.map(([name, count], i) => `
+                    <div class="exercise-list-item">
+                        <span style="color: rgba(255,255,255,0.5); width: 24px;">${i + 1}</span>
+                        <span style="flex: 1;">${name}</span>
+                        <span style="color: rgba(100,200,255,0.8);">${count} 次</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        renderAll();
+    </script>
+</body>
+</html>

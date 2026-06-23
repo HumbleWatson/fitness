@@ -1,0 +1,1296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a3a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/manifest.json">
+    <title>健身日记</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            min-height: 100vh;
+            background: 
+                radial-gradient(ellipse at 20% 50%, rgba(100, 150, 255, 0.25) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(150, 100, 255, 0.2) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 80%, rgba(100, 200, 180, 0.15) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1525 100%);
+            color: #fff;
+            max-width: 430px;
+            margin: 0 auto;
+            padding: 20px 16px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 34px;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(60px) saturate(200%);
+            -webkit-backdrop-filter: blur(60px) saturate(200%);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.2),
+                inset 0 1px 1px rgba(255, 255, 255, 0.35),
+                inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+        }
+
+        .glass-card::after {
+            content: '';
+            position: absolute;
+            top: -80%;
+            left: -20%;
+            width: 140%;
+            height: 100%;
+            background: radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.15) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .form-title {
+            font-size: 17px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            font-size: 16px;
+            color: #fff;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+
+        input:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+        }
+
+        .date-input {
+            max-width: 140px;
+        }
+
+        .sets-container {
+            margin-bottom: 12px;
+        }
+
+        .set-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .set-row input {
+            flex: 1;
+            padding: 12px;
+            font-size: 15px;
+        }
+
+        .set-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .set-num {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+            min-width: 24px;
+            text-align: center;
+            padding: 8px 0;
+        }
+
+        .remove-set-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            background: rgba(255, 59, 48, 0.15);
+            border: 1px solid rgba(255, 59, 48, 0.25);
+            border-radius: 8px;
+            font-size: 18px;
+            color: rgba(255, 100, 100, 0.9);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+
+        .remove-set-btn:hover {
+            background: rgba(255, 59, 48, 0.25);
+        }
+
+        .add-set-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 4px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px dashed rgba(255, 255, 255, 0.25);
+            border-radius: 10px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.5);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .add-set-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: rgba(255,255,255,0.7);
+        }
+
+        .add-btn {
+            width: 100%;
+            padding: 16px;
+            margin-top: 8px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(20px);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+
+        .add-btn:hover {
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .add-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .exercise-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .exercise-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .exercise-list::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 2px;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+                max-height: 100px;
+            }
+            to {
+                opacity: 0;
+                transform: translateX(50px);
+                max-height: 0;
+                padding: 0;
+                margin: 0;
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .exercise-item {
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .exercise-item.removing {
+            animation: slideOut 0.3s ease-out forwards;
+            overflow: hidden;
+        }
+
+        .day-card {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        .day-card.new {
+            animation: fadeInUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .exercise-tag {
+            padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .exercise-tag:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .exercise-tag.selected {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.4);
+            color: #fff;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+        }
+
+        .muscle-group {
+            margin-bottom: 12px;
+        }
+
+        .muscle-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .day-card {
+            background: rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(60px) saturate(200%);
+            -webkit-backdrop-filter: blur(60px) saturate(200%);
+            border-radius: 24px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.15),
+                inset 0 1px 1px rgba(255, 255, 255, 0.3);
+        }
+
+        .day-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .exercise-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .exercise-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .exercise-item:first-child {
+            padding-top: 0;
+        }
+
+        .exercise-name {
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .exercise-detail {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .delete-btn {
+            padding: 6px 12px;
+            background: rgba(255, 59, 48, 0.15);
+            border: 1px solid rgba(255, 59, 48, 0.25);
+            border-radius: 8px;
+            font-size: 13px;
+            color: rgba(255, 100, 100, 0.9);
+            cursor: pointer;
+            transition: all 0.25s ease;
+            white-space: nowrap;
+            min-width: 50px;
+            text-align: center;
+        }
+
+        .delete-btn:hover {
+            background: rgba(255, 59, 48, 0.25);
+        }
+
+        .delete-btn.confirm {
+            padding: 10px 20px;
+            background: rgba(255, 59, 48, 0.5);
+            border-color: rgba(255, 59, 48, 0.7);
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            animation: confirmPulse 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes confirmPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1.05); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: rgba(255,255,255,0.35);
+        }
+
+        .search-input {
+            margin-bottom: 12px;
+        }
+
+        .import-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.2),
+                inset 0 1px 1px rgba(255,255,255,0.3);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+
+        .import-btn:hover {
+            transform: scale(1.1);
+            background: rgba(255, 255, 255, 0.18);
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            background: rgba(30, 30, 50, 0.85);
+            backdrop-filter: blur(60px) saturate(200%);
+            border-radius: 24px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            box-shadow: 
+                0 24px 64px rgba(0, 0, 0, 0.4),
+                inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: rgba(255,255,255,0.85);
+        }
+
+        .modal-textarea {
+            width: 100%;
+            height: 200px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            outline: none;
+        }
+
+        .modal-textarea::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .modal-hint {
+            font-size: 12px;
+            color: rgba(255,255,255,0.35);
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .modal-btn.cancel {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255,255,255,0.7);
+        }
+
+        .modal-btn.confirm {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #fff;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.2);
+        }
+
+        .preview-section {
+            margin-top: 16px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        .preview-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            font-size: 13px;
+        }
+
+        .preview-date {
+            color: rgba(255,255,255,0.45);
+        }
+
+        .preview-count {
+            color: rgba(255,255,255,0.7);
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            padding: 4px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-bar::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filter-btn {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            font-size: 14px;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(20px);
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .filter-btn.active {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.35);
+            color: #fff;
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.25);
+        }
+
+        .filter-stats {
+            font-size: 13px;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 12px;
+            text-align: right;
+        }
+
+        .nav-link {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(20px);
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .user-bar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .user-name {
+            font-size: 13px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        .sync-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(100, 200, 100, 0.8);
+        }
+
+        .sync-status.syncing {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .auth-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 10px;
+            color: rgba(255,255,255,0.6);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .auth-tab.active {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.25);
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1>健身日记</h1>
+        <div class="user-bar">
+            <span class="user-name" id="userName"></span>
+            <span class="sync-status" id="syncStatus" style="display:none"></span>
+            <a href="stats.html" class="nav-link">📊</a>
+            <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
+        </div>
+    </div>
+    
+    <div class="glass-card">
+        <div class="form-title">添加记录</div>
+        <div class="form-row">
+            <input type="date" id="date" class="date-input">
+        </div>
+        <div class="form-row">
+            <input type="text" id="exercise" placeholder="选择或输入动作" readonly onclick="toggleExerciseLibrary()">
+        </div>
+        
+        <div id="setsContainer" class="sets-container">
+            <div class="set-row" data-set="0">
+                <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                <span class="set-label">kg</span>
+                <input type="number" placeholder="次数" class="reps-input">
+                <span class="set-label">×</span>
+                <input type="number" placeholder="组数" class="sets-input" value="1">
+                <button class="remove-set-btn" onclick="removeSet(this)" style="display:none">×</button>
+            </div>
+        </div>
+        <button class="add-set-btn" onclick="addSet()">+ 添加组</button>
+        
+        <button class="add-btn" onclick="addRecord()">添加</button>
+
+        <div id="exerciseLibrary" style="display: none; margin-top: 16px;">
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索动作..." oninput="filterExercises()">
+            <div id="exerciseList"></div>
+        </div>
+    </div>
+
+    <div class="filter-bar" id="filterBar">
+        <button class="filter-btn" onclick="setFilter('all')">全部</button>
+        <button class="filter-btn active" onclick="setFilter('week')">本周</button>
+        <button class="filter-btn" onclick="setFilter('month')">本月</button>
+        <button class="filter-btn" onclick="setFilter('30days')">近30天</button>
+        <button class="filter-btn" onclick="setFilter('90days')">近3月</button>
+    </div>
+    <div class="filter-stats" id="filterStats"></div>
+
+    <div id="records"></div>
+
+    <button class="import-btn" onclick="openImportModal()">📋</button>
+
+    <div class="modal-overlay" id="authModal">
+        <div class="modal-content">
+            <div class="modal-title">账号</div>
+            <div class="auth-tabs">
+                <div class="auth-tab active" onclick="switchAuthTab('login')">登录</div>
+                <div class="auth-tab" onclick="switchAuthTab('register')">注册</div>
+            </div>
+            <div id="loginForm">
+                <div class="form-row">
+                    <input type="text" id="loginUsername" placeholder="用户名">
+                </div>
+                <div class="form-row">
+                    <input type="password" id="loginPassword" placeholder="密码">
+                </div>
+            </div>
+            <div id="registerForm" style="display:none">
+                <div class="form-row">
+                    <input type="text" id="regUsername" placeholder="用户名">
+                </div>
+                <div class="form-row">
+                    <input type="password" id="regPassword" placeholder="密码">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeAuthModal()">取消</button>
+                <button class="modal-btn confirm" id="authSubmitBtn" onclick="handleAuth()">登录</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="importModal">
+        <div class="modal-content">
+            <div class="modal-title">导入训练记录</div>
+            <textarea class="modal-textarea" id="importText" placeholder="粘贴你的训练记录..."></textarea>
+            <div class="modal-hint">
+                支持格式：<br>
+                6.1<br>
+                深蹲 26kg 12x3<br>
+                腿倒蹬 59kg 12x1 66kg 12x3<br>
+                二头 6kg 15x4
+            </div>
+            <div id="previewSection" class="preview-section" style="display:none"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeImportModal()">取消</button>
+                <button class="modal-btn confirm" onclick="previewImport()">预览</button>
+                <button class="modal-btn confirm" onclick="confirmImport()">导入</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth & Sync
+        let authToken = localStorage.getItem('fitness_token');
+        let currentUser = localStorage.getItem('fitness_user');
+        let authMode = 'login';
+
+        function openAuthModal() {
+            document.getElementById('authModal').classList.add('active');
+        }
+
+        function closeAuthModal() {
+            document.getElementById('authModal').classList.remove('active');
+        }
+
+        function switchAuthTab(mode) {
+            authMode = mode;
+            document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('loginForm').style.display = mode === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = mode === 'register' ? 'block' : 'none';
+            document.getElementById('authSubmitBtn').textContent = mode === 'login' ? '登录' : '注册';
+        }
+
+        async function handleAuth() {
+            const isLogin = authMode === 'login';
+            const username = document.getElementById(isLogin ? 'loginUsername' : 'regUsername').value.trim();
+            const password = document.getElementById(isLogin ? 'loginPassword' : 'regPassword').value;
+            
+            if (!username || !password) {
+                alert('请填写完整信息');
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/${isLogin ? 'login' : 'register'}`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+                const result = await res.json();
+                
+                if (!res.ok) {
+                    alert(result.detail || '操作失败');
+                    return;
+                }
+
+                authToken = result.token;
+                currentUser = result.username;
+                localStorage.setItem('fitness_token', authToken);
+                localStorage.setItem('fitness_user', currentUser);
+                closeAuthModal();
+                updateUI();
+                syncFromServer();
+            } catch (e) {
+                alert('网络错误');
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('fitness_token');
+            localStorage.removeItem('fitness_user');
+            updateUI();
+        }
+
+        function updateUI() {
+            const userNameEl = document.getElementById('userName');
+            const authBtn = document.getElementById('authBtn');
+            const syncStatus = document.getElementById('syncStatus');
+            
+            if (currentUser) {
+                userNameEl.textContent = currentUser;
+                authBtn.textContent = '退出';
+                authBtn.onclick = logout;
+                syncStatus.style.display = 'block';
+            } else {
+                userNameEl.textContent = '';
+                authBtn.textContent = '登录';
+                authBtn.onclick = openAuthModal;
+                syncStatus.style.display = 'none';
+            }
+        }
+
+        async function syncToServer() {
+            if (!authToken) return;
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.classList.add('syncing');
+            
+            try {
+                const res = await fetch('/api/sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({data: data})
+                });
+                console.log('Sync to server:', res.ok);
+            } catch (e) {
+                console.error('Sync failed:', e);
+            }
+            syncStatus.classList.remove('syncing');
+        }
+
+        async function syncFromServer() {
+            if (!authToken) return;
+            const syncStatus = document.getElementById('syncStatus');
+            syncStatus.classList.add('syncing');
+            
+            try {
+                const res = await fetch('/api/records', {
+                    headers: {'Authorization': `Bearer ${authToken}`}
+                });
+                if (res.ok) {
+                    const serverData = await res.json();
+                    // Merge: keep newer data
+                    for (const [date, exercises] of Object.entries(serverData.data)) {
+                        if (!data[date] || exercises.length > data[date].length) {
+                            data[date] = exercises;
+                        }
+                    }
+                    localStorage.setItem('fitness', JSON.stringify(data));
+                    render();
+                }
+            } catch (e) {
+                console.error('Sync failed');
+            }
+            syncStatus.classList.remove('syncing');
+        }
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js');
+        }
+
+        const exerciseDB = {
+            '胸部': ['卧推', '上斜卧推', '下斜卧推', '窄距卧推', '哑铃飞鸟', '龙门架夹胸', '俯卧撑', '器械推胸'],
+            '背部': ['引体向上', '高位下拉', '杠铃划船', '哑铃划船', '坐姿划船', '硬拉', '山羊挺身', '直臂下压'],
+            '肩部': ['侧平举', '前平举', '俯身飞鸟', '杠铃推举', '哑铃推举', '阿诺德推举', '面拉', '耸肩'],
+            '手臂': ['二头弯举', '锤式弯举', '集中弯举', '三头下压', '臂屈伸', '过顶臂屈伸', '前臂弯举'],
+            '腿部': ['深蹲', '腿举', '腿屈伸', '腿弯举', '罗马尼亚硬拉', '保加利亚分腿蹲', '小腿提踵', '腿倒蹬'],
+            '核心': ['平板支撑', '卷腹', '俄罗斯转体', '悬垂举腿', '仰卧起坐', '死虫', '农夫行走']
+        };
+
+        let selectedExercise = '';
+
+        function renderExerciseLibrary() {
+            const container = document.getElementById('exerciseList');
+            container.innerHTML = Object.entries(exerciseDB).map(([group, exercises]) => `
+                <div class="muscle-group">
+                    <div class="muscle-label">${group}</div>
+                    <div class="exercise-list">
+                        ${exercises.map(ex => `
+                            <span class="exercise-tag ${selectedExercise === ex ? 'selected' : ''}" 
+                                  onclick="selectExercise('${ex}')">${ex}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleExerciseLibrary() {
+            const lib = document.getElementById('exerciseLibrary');
+            lib.style.display = lib.style.display === 'none' ? 'block' : 'none';
+            if (lib.style.display === 'block') {
+                renderExerciseLibrary();
+            }
+        }
+
+        function selectExercise(name) {
+            selectedExercise = name;
+            document.getElementById('exercise').value = name;
+            renderExerciseLibrary();
+            document.getElementById('exerciseLibrary').style.display = 'none';
+        }
+
+        function filterExercises() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const tags = document.querySelectorAll('.exercise-tag');
+            tags.forEach(tag => {
+                tag.style.display = tag.textContent.toLowerCase().includes(query) ? '' : 'none';
+            });
+        }
+
+        function addSet() {
+            const container = document.getElementById('setsContainer');
+            const setCount = container.querySelectorAll('.set-row').length;
+            const newRow = document.createElement('div');
+            newRow.className = 'set-row';
+            newRow.innerHTML = `
+                <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                <span class="set-label">kg</span>
+                <input type="number" placeholder="次数" class="reps-input">
+                <span class="set-label">×</span>
+                <input type="number" placeholder="组数" class="sets-input" value="1">
+                <button class="remove-set-btn" onclick="removeSet(this)">×</button>
+            `;
+            container.appendChild(newRow);
+            updateRemoveButtons();
+        }
+
+        function removeSet(btn) {
+            btn.closest('.set-row').remove();
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const rows = document.querySelectorAll('.set-row');
+            rows.forEach((row, i) => {
+                const btn = row.querySelector('.remove-set-btn');
+                btn.style.display = rows.length > 1 ? 'flex' : 'none';
+            });
+        }
+
+        function getSetsData() {
+            const rows = document.querySelectorAll('.set-row');
+            const result = [];
+            rows.forEach(row => {
+                const weight = parseFloat(row.querySelector('.weight-input').value) || 0;
+                const reps = parseInt(row.querySelector('.reps-input').value) || 0;
+                const setCount = parseInt(row.querySelector('.sets-input').value) || 1;
+                if (weight > 0 && reps > 0) {
+                    result.push({ weight, reps, sets: setCount });
+                }
+            });
+            return result;
+        }
+
+        function formatSets(sets) {
+            if (!sets || sets.length === 0) return '';
+            return sets.map(s => {
+                if (s.sets === 1) {
+                    return `${s.weight}kg ${s.reps}次`;
+                }
+                return `${s.weight}kg ${s.reps}次×${s.sets}`;
+            }).join(' / ');
+        }
+
+        let data = JSON.parse(localStorage.getItem('fitness') || '{}');
+        let currentFilter = 'week';
+
+        function setFilter(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            render();
+        }
+
+        function filterDates(dates) {
+            if (currentFilter === 'all') return dates;
+
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            return dates.filter(dateStr => {
+                const [y, m, d] = dateStr.split('-').map(Number);
+                const date = new Date(y, m - 1, d);
+
+                switch (currentFilter) {
+                    case 'week': {
+                        const weekStart = new Date(today);
+                        weekStart.setDate(today.getDate() - today.getDay());
+                        return date >= weekStart;
+                    }
+                    case 'month':
+                        return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+                    case '30days': {
+                        const diff = (today - date) / (1000 * 60 * 60 * 24);
+                        return diff < 30;
+                    }
+                    case '90days': {
+                        const diff = (today - date) / (1000 * 60 * 60 * 24);
+                        return diff < 90;
+                    }
+                    default:
+                        return true;
+                }
+            });
+        }
+        
+        function render() {
+            const container = document.getElementById('records');
+            const allDates = Object.keys(data).sort().reverse();
+            const dates = filterDates(allDates);
+            
+            const statsEl = document.getElementById('filterStats');
+            statsEl.textContent = dates.length < allDates.length ? `显示 ${dates.length}/${allDates.length} 天` : '';
+
+            if (dates.length === 0) {
+                container.innerHTML = '<div class="glass-card"><div class="empty-state">暂无训练记录<br>开始你的第一次训练吧</div></div>';
+                return;
+            }
+            
+            container.innerHTML = dates.map(date => {
+                const exercises = data[date];
+                return `
+                    <div class="day-card">
+                        <div class="day-header">${date}</div>
+                        ${exercises.map((ex, i) => `
+                            <div class="exercise-item" data-date="${date}" data-index="${i}">
+                                <span class="exercise-name">${ex.name}</span>
+                                <span class="exercise-detail">
+                                    ${formatSets(ex.sets)}
+                                    <button class="delete-btn" onclick="handleDelete(this, '${date}', ${i})">删除</button>
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function addRecord() {
+            const date = document.getElementById('date').value;
+            const name = document.getElementById('exercise').value.trim();
+            const sets = getSetsData();
+            
+            if (!date || !name || sets.length === 0) {
+                alert('请填写完整信息');
+                return;
+            }
+            
+            if (!data[date]) data[date] = [];
+            data[date].push({ name, sets });
+            
+            localStorage.setItem('fitness', JSON.stringify(data));
+            
+            document.getElementById('exercise').value = '';
+            selectedExercise = '';
+            
+            // Reset sets
+            document.getElementById('setsContainer').innerHTML = `
+                <div class="set-row" data-set="0">
+                    <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                    <span class="set-label">kg</span>
+                    <input type="number" placeholder="次数" class="reps-input">
+                    <span class="set-label">×</span>
+                    <input type="number" placeholder="组数" class="sets-input" value="1">
+                    <button class="remove-set-btn" onclick="removeSet(this)" style="display:none">×</button>
+                </div>
+            `;
+            
+            render();
+            syncToServer();
+            
+            // Animate the newly added item
+            setTimeout(() => {
+                const items = document.querySelectorAll('.exercise-item');
+                if (items.length > 0) {
+                    const lastItem = items[items.length - 1];
+                    lastItem.style.background = 'rgba(100, 200, 255, 0.15)';
+                    setTimeout(() => {
+                        lastItem.style.background = '';
+                        lastItem.style.transition = 'background 0.5s ease';
+                    }, 500);
+                }
+            }, 50);
+        }
+        
+        function handleDelete(btn, date, index) {
+            if (btn.classList.contains('confirm')) {
+                deleteRecord(date, index);
+            } else {
+                btn.textContent = '确认';
+                btn.classList.add('confirm');
+                setTimeout(() => {
+                    btn.textContent = '删除';
+                    btn.classList.remove('confirm');
+                }, 2000);
+            }
+        }
+        
+        function deleteRecord(date, index) {
+            const item = document.querySelector(`[data-date="${date}"][data-index="${index}"]`);
+            if (item) {
+                item.classList.add('removing');
+                setTimeout(() => {
+                    data[date].splice(index, 1);
+                    if (data[date].length === 0) delete data[date];
+                    localStorage.setItem('fitness', JSON.stringify(data));
+                    render();
+                    syncToServer();
+                }, 300);
+            }
+        }
+        
+        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        updateUI();
+        render();
+        if (authToken) syncFromServer();
+
+        // Import functions
+        let parsedData = {};
+
+        function openImportModal() {
+            document.getElementById('importModal').classList.add('active');
+            document.getElementById('previewSection').style.display = 'none';
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+            document.getElementById('importText').value = '';
+            document.getElementById('previewSection').style.display = 'none';
+        }
+
+        function parseImportText(text) {
+            const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+            const result = {};
+            let currentDate = null;
+            const currentYear = new Date().getFullYear();
+
+            for (const line of lines) {
+                // Skip notes/comments
+                if (line.startsWith('均为') || line.startsWith('注') || line.startsWith('#')) continue;
+
+                // Check if it's a date line (e.g., "6.1", "6.2", "12.25")
+                const dateMatch = line.match(/^(\d{1,2})\.(\d{1,2})$/);
+                if (dateMatch) {
+                    const month = dateMatch[1].padStart(2, '0');
+                    const day = dateMatch[2].padStart(2, '0');
+                    currentDate = `${currentYear}-${month}-${day}`;
+                    if (!result[currentDate]) result[currentDate] = [];
+                    continue;
+                }
+
+                // Parse exercise line
+                if (currentDate && line) {
+                    const exercise = parseExerciseLine(line);
+                    if (exercise) {
+                        result[currentDate].push(exercise);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        function parseExerciseLine(line) {
+            // Handle compound exercises like "坐姿划船&高位下拉"
+            const nameMatch = line.match(/^([^\d]+?)\s/);
+            if (!nameMatch) return null;
+
+            const name = nameMatch[1].replace(/[&＆]/g, ' & ').trim();
+            const rest = line.slice(nameMatch[0].length);
+
+            // Parse all weight x reps pairs
+            const setPattern = /(\d+(?:\.\d+)?)\s*kg?\s*(\d+)\s*[xX×]\s*(\d+)/g;
+            const sets = [];
+            let match;
+
+            while ((match = setPattern.exec(rest)) !== null) {
+                sets.push({
+                    weight: parseFloat(match[1]),
+                    reps: parseInt(match[2]),
+                    sets: parseInt(match[3])
+                });
+            }
+
+            if (sets.length === 0) return null;
+
+            return { name, sets };
+        }
+
+        function previewImport() {
+            const text = document.getElementById('importText').value;
+            parsedData = parseImportText(text);
+            
+            const previewSection = document.getElementById('previewSection');
+            const dates = Object.keys(parsedData).sort();
+
+            if (dates.length === 0) {
+                previewSection.innerHTML = '<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 20px;">未识别到有效记录</div>';
+            } else {
+                previewSection.innerHTML = dates.map(date => {
+                    const count = parsedData[date].length;
+                    return `<div class="preview-item">
+                        <span class="preview-date">${date}</span>
+                        <span class="preview-count">${count} 条记录</span>
+                    </div>`;
+                }).join('');
+            }
+            
+            previewSection.style.display = 'block';
+        }
+
+        function confirmImport() {
+            const text = document.getElementById('importText').value;
+            if (!text.trim()) {
+                alert('请先粘贴训练记录');
+                return;
+            }
+
+            const imported = parseImportText(text);
+            const dates = Object.keys(imported);
+
+            if (dates.length === 0) {
+                alert('未识别到有效记录');
+                return;
+            }
+
+            // Merge with existing data
+            for (const date of dates) {
+                if (!data[date]) data[date] = [];
+                data[date].push(...imported[date]);
+            }
+
+            localStorage.setItem('fitness', JSON.stringify(data));
+            closeImportModal();
+            render();
+            syncToServer();
+            alert(`成功导入 ${dates.length} 天的训练记录`);
+        }
+    </script>
+</body>
+</html>
