@@ -874,7 +874,7 @@
                 }
 
                 authToken = result.token;
-                currentUser = result.username;
+                currentUser = result.username || '用户';
                 localStorage.setItem('fitness_token', authToken);
                 localStorage.setItem('fitness_user', currentUser);
                 closeAuthModal();
@@ -1365,7 +1365,7 @@
                             s.weight === newEx.sets[i].weight &&
                             s.reps === newEx.sets[i].reps &&
                             s.sets === newEx.sets[i].sets &&
-                            s.assisted === newEx.sets[i].assisted
+                            !!s.assisted === !!newEx.sets[i].assisted
                         );
                     });
                     
