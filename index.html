@@ -1294,8 +1294,8 @@
             // Detect assisted weight
             const isAssisted = rest.includes('辅助');
 
-            // Parse all weight x reps pairs
-            const setPattern = /(\d+(?:\.\d+)?)\s*kg?\s*(\d+)\s*[xX×]\s*(\d+)/g;
+            // Parse all weight x reps pairs (allow "辅助" between weight and reps)
+            const setPattern = /(\d+(?:\.\d+)?)\s*kg?\s*(?:辅助\s*)?(\d+)\s*[xX×]\s*(\d+)/g;
             const sets = [];
             let match;
 
@@ -1350,17 +1350,42 @@
                 return;
             }
 
-            // Merge with existing data
+            // Check for duplicates
+            let duplicates = 0;
+            let added = 0;
+
             for (const date of dates) {
                 if (!data[date]) data[date] = [];
-                data[date].push(...imported[date]);
+                
+                for (const newEx of imported[date]) {
+                    const isDuplicate = data[date].some(existing => {
+                        if (existing.name !== newEx.name) return false;
+                        if (existing.sets.length !== newEx.sets.length) return false;
+                        return existing.sets.every((s, i) => 
+                            s.weight === newEx.sets[i].weight &&
+                            s.reps === newEx.sets[i].reps &&
+                            s.sets === newEx.sets[i].sets &&
+                            s.assisted === newEx.sets[i].assisted
+                        );
+                    });
+                    
+                    if (isDuplicate) {
+                        duplicates++;
+                    } else {
+                        data[date].push(newEx);
+                        added++;
+                    }
+                }
             }
 
             localStorage.setItem('fitness', JSON.stringify(data));
             closeImportModal();
             render();
             syncToServer();
-            alert(`成功导入 ${dates.length} 天的训练记录`);
+            
+            let msg = `导入完成：新增 ${added} 条`;
+            if (duplicates > 0) msg += `，跳过 ${duplicates} 条重复`;
+            alert(msg);
         }
     </script>
 </body>
