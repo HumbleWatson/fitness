@@ -4,6 +4,7 @@ __pycache__/
 fitness.db
 cert.pem
 key.pem
+.secret
 .env
 venv/
 .venv/

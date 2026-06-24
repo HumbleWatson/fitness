@@ -724,6 +724,7 @@
         <h1>健身日记</h1>
         <div class="user-bar">
             <span class="user-name" id="userName"></span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.01</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
             <a href="stats.html" class="nav-link">📊</a>
             <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
@@ -741,11 +742,11 @@
         
         <div id="setsContainer" class="sets-container">
             <div class="set-row" data-set="0">
-                <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                <input type="number" placeholder="重量" step="0.5" class="weight-input" onkeydown="onEnterNext(event)">
                 <span class="set-label">kg</span>
-                <input type="number" placeholder="次数" class="reps-input">
+                <input type="number" placeholder="次数" class="reps-input" onkeydown="onEnterNext(event)">
                 <span class="set-label">×</span>
-                <input type="number" placeholder="组数" class="sets-input" value="1">
+                <input type="number" placeholder="组数" class="sets-input" value="3" onkeydown="onEnterNext(event)">
                 <label class="assisted-label">
                     <input type="checkbox" class="assisted-check">
                     <span>辅助</span>
@@ -828,9 +829,11 @@
     </div>
 
     <script>
+        const APP_VERSION = 'v1.01';
         // Auth & Sync
         let authToken = localStorage.getItem('fitness_token');
-        let currentUser = localStorage.getItem('fitness_user');
+        let storedUser = localStorage.getItem('fitness_user');
+        let currentUser = storedUser && storedUser !== 'undefined' && storedUser !== 'null' ? storedUser : null;
         let authMode = 'login';
 
         function openAuthModal() {
@@ -943,10 +946,18 @@
                 });
                 if (res.ok) {
                     const serverData = await res.json();
-                    // Merge: keep newer data
-                    for (const [date, exercises] of Object.entries(serverData.data)) {
-                        if (!data[date] || exercises.length > data[date].length) {
-                            data[date] = exercises;
+                    for (const [date, serverExercises] of Object.entries(serverData.data)) {
+                        if (!data[date]) {
+                            data[date] = serverExercises;
+                        } else {
+                            for (const serverEx of serverExercises) {
+                                const idx = data[date].findIndex(localEx => localEx.name === serverEx.name);
+                                if (idx === -1) {
+                                    data[date].push(serverEx);
+                                } else {
+                                    data[date][idx] = serverEx;
+                                }
+                            }
                         }
                     }
                     localStorage.setItem('fitness', JSON.stringify(data));
@@ -960,7 +971,7 @@
 
         // Service Worker
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js');
+            navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION);
         }
 
         const exerciseDB = {
@@ -1012,17 +1023,26 @@
             });
         }
 
+        function onEnterNext(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const inputs = e.target.closest('.set-row').querySelectorAll('input:not([type=checkbox])');
+                const idx = Array.from(inputs).indexOf(e.target);
+                if (idx < inputs.length - 1) inputs[idx + 1].focus();
+            }
+        }
+
         function addSet() {
             const container = document.getElementById('setsContainer');
             const setCount = container.querySelectorAll('.set-row').length;
             const newRow = document.createElement('div');
             newRow.className = 'set-row';
             newRow.innerHTML = `
-                <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                <input type="number" placeholder="重量" step="0.5" class="weight-input" onkeydown="onEnterNext(event)">
                 <span class="set-label">kg</span>
-                <input type="number" placeholder="次数" class="reps-input">
+                <input type="number" placeholder="次数" class="reps-input" onkeydown="onEnterNext(event)">
                 <span class="set-label">×</span>
-                <input type="number" placeholder="组数" class="sets-input" value="1">
+                <input type="number" placeholder="组数" class="sets-input" value="3" onkeydown="onEnterNext(event)">
                 <label class="assisted-label">
                     <input type="checkbox" class="assisted-check">
                     <span>辅助</span>
@@ -1175,11 +1195,11 @@
             // Reset sets
             document.getElementById('setsContainer').innerHTML = `
                 <div class="set-row" data-set="0">
-                    <input type="number" placeholder="重量" step="0.5" class="weight-input">
+                    <input type="number" placeholder="重量" step="0.5" class="weight-input" onkeydown="onEnterNext(event)">
                     <span class="set-label">kg</span>
-                    <input type="number" placeholder="次数" class="reps-input">
+                    <input type="number" placeholder="次数" class="reps-input" onkeydown="onEnterNext(event)">
                     <span class="set-label">×</span>
-                    <input type="number" placeholder="组数" class="sets-input" value="1">
+                    <input type="number" placeholder="组数" class="sets-input" value="3" onkeydown="onEnterNext(event)">
                     <label class="assisted-label">
                         <input type="checkbox" class="assisted-check">
                         <span>辅助</span>
@@ -1232,7 +1252,8 @@
             }
         }
         
-        document.getElementById('date').value = new Date().toISOString().split('T')[0];
+        const today = new Date();
+document.getElementById('date').value = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
         updateUI();
         render();
         if (authToken) syncFromServer();
@@ -1358,8 +1379,9 @@
                 if (!data[date]) data[date] = [];
                 
                 for (const newEx of imported[date]) {
+                    const normalizeName = n => n.replace(/[&＆]/g, ' & ').replace(/\s+/g, ' ').trim();
                     const isDuplicate = data[date].some(existing => {
-                        if (existing.name !== newEx.name) return false;
+                        if (normalizeName(existing.name) !== normalizeName(newEx.name)) return false;
                         if (existing.sets.length !== newEx.sets.length) return false;
                         return existing.sets.every((s, i) => 
                             s.weight === newEx.sets[i].weight &&

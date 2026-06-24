@@ -1,4 +1,5 @@
-const CACHE_NAME = 'fitness-v1';
+const VERSION = new URL(self.location).searchParams.get('v') || 'v1';
+const CACHE_NAME = 'fitness-' + VERSION;
 const ASSETS = [
     '/',
     '/index.html',

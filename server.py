@@ -13,7 +13,18 @@ from typing import Optional
 app = FastAPI()
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "fitness.db")
-SECRET_KEY = secrets.token_hex(32)
+SECRET_FILE = os.path.join(os.path.dirname(__file__), ".secret")
+if os.path.exists(SECRET_FILE):
+    with open(SECRET_FILE) as f:
+        SECRET_KEY = f.read().strip()
+    if not SECRET_KEY:
+        SECRET_KEY = secrets.token_hex(32)
+        with open(SECRET_FILE, "w") as f:
+            f.write(SECRET_KEY)
+else:
+    SECRET_KEY = secrets.token_hex(32)
+    with open(SECRET_FILE, "w") as f:
+        f.write(SECRET_KEY)
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -170,4 +181,4 @@ if __name__ == "__main__":
     import uvicorn
     ssl_cert = os.path.join(os.path.dirname(__file__), "cert.pem")
     ssl_key = os.path.join(os.path.dirname(__file__), "key.pem")
-    uvicorn.run(app, host="0.0.0.0", port=8080, ssl_certfile=ssl_cert, ssl_keyfile=ssl_key)
+    uvicorn.run(app, host="127.0.0.1", port=8080, ssl_certfile=ssl_cert, ssl_keyfile=ssl_key)

@@ -1,0 +1,12 @@
+__pycache__
+*.pyc
+.git
+.gitignore
+.env
+fitness.db
+cert.pem
+key.pem
+docker-compose.yml
+Dockerfile
+README.md
+LICENSE
