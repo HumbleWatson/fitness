@@ -724,7 +724,7 @@
         <h1>健身日记</h1>
         <div class="user-bar">
             <span class="user-name" id="userName"></span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.01</span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.02</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
             <a href="stats.html" class="nav-link">📊</a>
             <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
@@ -829,7 +829,7 @@
     </div>
 
     <script>
-        const APP_VERSION = 'v1.01';
+        const APP_VERSION = 'v1.02';
         // Auth & Sync
         let authToken = localStorage.getItem('fitness_token');
         let storedUser = localStorage.getItem('fitness_user');
@@ -946,6 +946,7 @@
                 });
                 if (res.ok) {
                     const serverData = await res.json();
+                    normalizeAllData(serverData.data);
                     for (const [date, serverExercises] of Object.entries(serverData.data)) {
                         if (!data[date]) {
                             data[date] = serverExercises;
@@ -1098,7 +1099,31 @@
             }).join(' / ');
         }
 
-        let data = JSON.parse(localStorage.getItem('fitness') || '{}');
+        function normalizeExercises(exercises) {
+            const result = [];
+            for (const ex of exercises) {
+                const name = ex.name.replace(/[&＆]/g, ' & ').replace(/\s+/g, ' ').trim();
+                if (name === '引体') {
+                    result.push({ ...ex, name: '引体向上' });
+                } else if (name.includes(' & ')) {
+                    for (const part of name.split(' & ').filter(Boolean)) {
+                        result.push({ name: part, sets: ex.sets.map(s => ({ ...s })) });
+                    }
+                } else {
+                    result.push(ex);
+                }
+            }
+            return result;
+        }
+
+        function normalizeAllData(obj) {
+            for (const date of Object.keys(obj)) {
+                obj[date] = normalizeExercises(obj[date]);
+            }
+            return obj;
+        }
+
+        let data = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
         let currentFilter = 'week';
 
         function setFilter(filter) {
