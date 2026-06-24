@@ -4,7 +4,7 @@ services:
     container_name: fitness
     restart: always
     ports:
-      - "127.0.0.1:8081:8080"
+      - "127.0.0.1:9081:8080"
     volumes:
       - ./fitness.db:/app/fitness.db
       - ./.secret:/app/.secret
