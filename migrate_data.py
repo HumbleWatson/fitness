@@ -6,20 +6,32 @@ from datetime import datetime
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "fitness.db")
 
+NAME_MAP = {
+    "引体": "引体向上",
+    "二头": "二头弯举",
+    "三头": "臂屈伸",
+    "卧推": "哑铃卧推",
+    "上斜卧推": "上斜哑铃卧推",
+    "下斜卧推": "下斜哑铃卧推",
+    "窄距卧推": "窄距哑铃卧推",
+    "硬拉": "哑铃硬拉",
+}
+
 def normalize_exercises(exercises):
-    result = []
+    merged = {}
     for ex in exercises:
-        name = re.sub(r'\s+', ' ', ex["name"].replace("＆", " & ").replace("&", " & ")).strip()
-        if name == "引体":
-            result.append({**ex, "name": "引体向上"})
-        elif " & " in name:
+        raw = ex["name"]
+        name = NAME_MAP.get(raw, raw)
+        name = re.sub(r'\s+', ' ', name.replace("＆", " & ").replace("&", " & ")).strip()
+        if " & " in name:
             for part in name.split(" & "):
                 p = part.strip()
-                if p:
-                    result.append({"name": p, "sets": [dict(s) for s in ex["sets"]]})
+                if not p:
+                    continue
+                merged.setdefault(p, []).extend(dict(s) for s in ex["sets"])
         else:
-            result.append(ex)
-    return result
+            merged.setdefault(name, []).extend(dict(s) for s in ex["sets"])
+    return [{"name": k, "sets": v} for k, v in merged.items()]
 
 
 conn = sqlite3.connect(DB_PATH)
