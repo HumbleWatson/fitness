@@ -226,6 +226,61 @@
             border-bottom: none;
         }
 
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.show { display: flex; }
+        .modal-card {
+            background: rgba(30,30,60,0.95);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 24px;
+            padding: 24px;
+            width: calc(100% - 40px);
+            max-width: 340px;
+            max-height: 70vh;
+            overflow-y: auto;
+            backdrop-filter: blur(60px);
+            box-shadow: 0 16px 64px rgba(0,0,0,0.5);
+        }
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-close {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-close:hover { background: rgba(255,255,255,0.2); }
+        .modal-exercise {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 15px;
+        }
+        .modal-exercise:last-child { border-bottom: none; }
+        .modal-exercise-name { color: rgba(255,255,255,0.85); }
+        .modal-exercise-count { color: rgba(100,200,255,0.8); font-weight: 500; }
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -358,6 +413,7 @@
 
         let currentFilter = 'week';
         let volumeChart = null;
+        let muscleExercisesDetail = {};
 
         function setFilter(filter) {
             currentFilter = filter;
@@ -415,6 +471,7 @@
             let totalVolume = 0;
             const muscleCount = {};
             const exerciseCount = {};
+            const muscleExercises = {};
             const dailyVolume = {};
 
             dates.forEach(date => {
@@ -424,6 +481,8 @@
                     const muscle = muscleMap[ex.name] || '其他';
                     muscleCount[muscle] = (muscleCount[muscle] || 0) + 1;
                     exerciseCount[ex.name] = (exerciseCount[ex.name] || 0) + 1;
+                    if (!muscleExercises[muscle]) muscleExercises[muscle] = {};
+                    muscleExercises[muscle][ex.name] = (muscleExercises[muscle][ex.name] || 0) + 1;
 
                     ex.sets.forEach(s => {
                         totalSets += s.sets;
@@ -434,7 +493,7 @@
                 });
             });
 
-            return { totalDays: dates.length, totalExercises, totalSets, totalVolume, muscleCount, exerciseCount, dailyVolume, dates };
+            return { totalDays: dates.length, totalExercises, totalSets, totalVolume, muscleCount, exerciseCount, muscleExercises, dailyVolume, dates };
         }
 
         function renderAll() {
@@ -446,6 +505,7 @@
             document.getElementById('totalExercises').textContent = stats.totalExercises;
             document.getElementById('totalSets').textContent = stats.totalSets;
             document.getElementById('totalVolume').textContent = stats.totalVolume.toLocaleString();
+            muscleExercisesDetail = stats.muscleExercises;
 
             // Muscle distribution
             const muscleContainer = document.getElementById('muscleDistribution');
@@ -455,7 +515,7 @@
                 const count = stats.muscleCount[muscle] || 0;
                 const pct = (count / maxMuscle) * 100;
                 return `
-                    <div class="muscle-bar">
+                    <div class="muscle-bar" onclick="showMuscleDetail('${muscle}')" style="cursor:pointer;">
                         <span class="muscle-name">${muscle}</span>
                         <div class="muscle-track">
                             <div class="muscle-fill" style="width: ${pct}%; background: ${muscleColors[muscle]}40; border-left: 3px solid ${muscleColors[muscle]};">
@@ -511,7 +571,35 @@
             }
         }
 
+        function showMuscleDetail(muscle) {
+            const exs = muscleExercisesDetail[muscle] || {};
+            const sorted = Object.entries(exs).sort((a, b) => b[1] - a[1]);
+            document.getElementById('modalTitle').textContent = muscle;
+            const list = document.getElementById('modalList');
+            if (sorted.length === 0) {
+                list.innerHTML = '<div class="empty-state">暂无数据</div>';
+            } else {
+                list.innerHTML = sorted.map(([name, count]) => `
+                    <div class="modal-exercise">
+                        <span class="modal-exercise-name">${name}</span>
+                        <span class="modal-exercise-count">${count} 次</span>
+                    </div>
+                `).join('');
+            }
+            document.getElementById('muscleModal').classList.add('show');
+        }
+
         renderAll();
     </script>
+
+    <div class="modal-overlay" id="muscleModal" onclick="if (event.target === this) this.classList.remove('show')">
+        <div class="modal-card">
+            <div class="modal-title">
+                <span id="modalTitle"></span>
+                <button class="modal-close" onclick="document.getElementById('muscleModal').classList.remove('show')">✕</button>
+            </div>
+            <div id="modalList"></div>
+        </div>
+    </div>
 </body>
 </html>
