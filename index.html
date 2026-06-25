@@ -728,7 +728,7 @@
         <h1>健身日记</h1>
         <div class="user-bar">
             <span class="user-name" id="userName"></span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.11</span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.12</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
             <a href="stats.html" class="nav-link">📊</a>
             <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
@@ -833,7 +833,7 @@
     </div>
 
     <script>
-        const APP_VERSION = 'v1.11';
+        const APP_VERSION = 'v1.12';
         // Auth & Sync
         let authToken = localStorage.getItem('fitness_token');
         let storedUser = localStorage.getItem('fitness_user');
@@ -1192,7 +1192,7 @@
         
         function render() {
             const container = document.getElementById('records');
-            const allDates = Object.keys(data).sort().reverse();
+            const allDates = Object.keys(data).filter(d => data[d].length > 0).sort().reverse();
             const dates = filterDates(allDates);
             
             const statsEl = document.getElementById('filterStats');
@@ -1292,10 +1292,19 @@
                 item.classList.add('removing');
                 setTimeout(() => {
                     data[date].splice(index, 1);
-                    if (data[date].length === 0) delete data[date];
-                    localStorage.setItem('fitness', JSON.stringify(data));
-                    render();
-                    syncToServer();
+                    if (data[date].length === 0) {
+                        delete data[date];
+                        localStorage.setItem('fitness', JSON.stringify(data));
+                        render();
+                        if (authToken) {
+                            fetch('/api/records/' + date, { method: 'DELETE', headers: {'Authorization': `Bearer ${authToken}`} })
+                                .then(r => { if (!r.ok) syncToServer(); });
+                        }
+                    } else {
+                        localStorage.setItem('fitness', JSON.stringify(data));
+                        render();
+                        syncToServer();
+                    }
                 }, 300);
             }
         }
