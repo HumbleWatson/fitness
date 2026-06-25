@@ -18,10 +18,14 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        html {
+            background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1525 100%);
+            overscroll-behavior: none;
+        }
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
             min-height: 100vh;
-            min-height: -webkit-fill-available;
             background: 
                 radial-gradient(ellipse at 20% 50%, rgba(100, 150, 255, 0.25) 0%, transparent 50%),
                 radial-gradient(ellipse at 80% 20%, rgba(150, 100, 255, 0.2) 0%, transparent 50%),
@@ -30,7 +34,7 @@
             color: #fff;
             max-width: 430px;
             margin: 0 auto;
-            padding: 12px max(16px, env(safe-area-inset-right, 16px)) max(20px, env(safe-area-inset-bottom, 20px)) max(16px, env(safe-area-inset-left, 16px));
+            padding: 20px 16px;
             -webkit-font-smoothing: antialiased;
         }
 
@@ -38,7 +42,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 24px;
         }
 
         h1 {
@@ -56,8 +60,8 @@
             backdrop-filter: blur(60px) saturate(200%);
             -webkit-backdrop-filter: blur(60px) saturate(200%);
             border-radius: 24px;
-            padding: 18px;
-            margin-bottom: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
             border: 1px solid rgba(255, 255, 255, 0.25);
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.2),
@@ -362,8 +366,8 @@
             backdrop-filter: blur(60px) saturate(200%);
             -webkit-backdrop-filter: blur(60px) saturate(200%);
             border-radius: 24px;
-            padding: 18px;
-            margin-bottom: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
             border: 1px solid rgba(255, 255, 255, 0.2);
             box-shadow: 
                 0 8px 32px rgba(0, 0, 0, 0.15),
@@ -465,8 +469,8 @@
 
         .import-btn {
             position: fixed;
-            bottom: max(20px, env(safe-area-inset-bottom, 20px));
-            right: max(20px, env(safe-area-inset-right, 20px));
+            bottom: 20px;
+            right: 20px;
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -607,7 +611,7 @@
         .filter-bar {
             display: flex;
             gap: 8px;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
@@ -648,7 +652,7 @@
         .filter-stats {
             font-size: 13px;
             color: rgba(255,255,255,0.35);
-            margin-bottom: 8px;
+            margin-bottom: 12px;
             text-align: right;
         }
 
@@ -725,7 +729,7 @@
         <h1>健身日记</h1>
         <div class="user-bar">
             <span class="user-name" id="userName"></span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.09</span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.10</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
             <a href="stats.html" class="nav-link">📊</a>
             <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
@@ -830,7 +834,7 @@
     </div>
 
     <script>
-        const APP_VERSION = 'v1.09';
+        const APP_VERSION = 'v1.10';
         // Auth & Sync
         let authToken = localStorage.getItem('fitness_token');
         let storedUser = localStorage.getItem('fitness_user');
