@@ -20,7 +20,6 @@
         
         html {
             background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1525 100%);
-            overscroll-behavior: none;
         }
         
         body {
@@ -34,7 +33,7 @@
             color: #fff;
             max-width: 430px;
             margin: 0 auto;
-            padding: 20px 16px;
+            padding: max(20px, env(safe-area-inset-top, 20px)) max(16px, env(safe-area-inset-right, 16px)) max(20px, env(safe-area-inset-bottom, 20px)) max(16px, env(safe-area-inset-left, 16px));
             -webkit-font-smoothing: antialiased;
         }
 
@@ -469,8 +468,8 @@
 
         .import-btn {
             position: fixed;
-            bottom: 20px;
-            right: 20px;
+            bottom: max(20px, env(safe-area-inset-bottom, 20px));
+            right: max(20px, env(safe-area-inset-right, 20px));
             width: 56px;
             height: 56px;
             border-radius: 50%;
@@ -504,7 +503,7 @@
             z-index: 200;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: max(20px, env(safe-area-inset-top, 20px)) max(20px, env(safe-area-inset-right, 20px)) max(20px, env(safe-area-inset-bottom, 20px)) max(20px, env(safe-area-inset-left, 20px));
         }
 
         .modal-overlay.active {
