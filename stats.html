@@ -274,25 +274,6 @@
         .modal-exercise:last-child { border-bottom: none; }
         .modal-exercise-name { color: rgba(255,255,255,0.85); }
         .modal-exercise-count { color: rgba(100,200,255,0.8); font-weight: 500; }
-        .trend-selector {
-            margin-bottom: 12px;
-            position: relative;
-        }
-        .trend-selector input {
-            width: 100%;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.15);
-            border-radius: 12px;
-            font-size: 15px;
-            color: #fff;
-            outline: none;
-        }
-        .trend-selector input::placeholder { color: rgba(255,255,255,0.4); }
-        .trend-selector input:focus {
-            background: rgba(255,255,255,0.1);
-            border-color: rgba(255,255,255,0.3);
-        }
         .trend-list {
             display: flex;
             flex-wrap: wrap;
@@ -402,9 +383,6 @@
 
     <div class="glass-card" id="trendCard">
         <div class="card-title">动作趋势分析</div>
-        <div class="trend-selector">
-            <input type="text" id="trendSearch" placeholder="搜索或选择动作..." oninput="filterTrendList()" onfocus="document.getElementById('trendTagList').style.display='flex'">
-        </div>
         <div class="trend-list" id="trendTagList"></div>
         <div id="trendPlaceholder" class="empty-state">选择一个动作查看趋势</div>
         <div class="trend-charts" id="trendCharts" style="display:none">
@@ -645,13 +623,6 @@
                 }
             });
 
-            // Trend exercise tag list
-            allExerciseNames = getAllExerciseNames();
-            const tagList = document.getElementById('trendTagList');
-            tagList.innerHTML = allExerciseNames.map(name =>
-                `<span class="trend-tag" onclick="selectTrendExercise('${name}')">${name}</span>`
-            ).join('');
-
             // Top exercises — clickable to show trend
             const topContainer = document.getElementById('topExercises');
             const sorted = Object.entries(stats.exerciseCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -668,13 +639,37 @@
             }
         }
 
-        function getAllExerciseNames() {
-            const data = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
-            const names = new Set();
-            for (const exercises of Object.values(data)) {
-                for (const ex of exercises) names.add(ex.name);
+        async function loadExerciseNames() {
+            const token = localStorage.getItem('fitness_token');
+            let names = [];
+            if (token) {
+                try {
+                    const res = await fetch('/api/exercises', {headers: {'Authorization': `Bearer ${token}`}});
+                    if (res.ok) {
+                        const data = await res.json();
+                        names = data.exercises;
+                    }
+                } catch (e) {}
             }
-            return [...names].sort();
+            if (names.length === 0) {
+                const local = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
+                const counts = {};
+                for (const exercises of Object.values(local)) {
+                    for (const ex of exercises) {
+                        counts[ex.name] = (counts[ex.name] || 0) + 1;
+                    }
+                }
+                names = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([n, c]) => ({name: n, count: c}));
+            }
+            allExerciseNames = names;
+            const tagList = document.getElementById('trendTagList');
+            if (names.length === 0) {
+                tagList.innerHTML = '<div class="empty-state" style="padding:20px">暂无动作数据</div>';
+            } else {
+                tagList.innerHTML = names.map(ex =>
+                    `<span class="trend-tag" data-name="${ex.name}" onclick="selectTrendExercise('${ex.name}')">${ex.name} <span style="color:rgba(255,255,255,0.25);font-size:11px">${ex.count}</span></span>`
+                ).join('');
+            }
         }
 
         function getExerciseTrend(exerciseName) {
@@ -750,18 +745,8 @@
         }
 
         function selectTrendExercise(name) {
-            document.getElementById('trendSearch').value = name;
-            document.getElementById('trendTagList').style.display = 'none';
-            document.querySelectorAll('.trend-tag').forEach(t => t.classList.toggle('active', t.textContent === name));
+            document.querySelectorAll('.trend-tag').forEach(t => t.classList.toggle('active', t.dataset.name === name));
             renderExerciseTrend(name);
-        }
-
-        function filterTrendList() {
-            const q = document.getElementById('trendSearch').value.toLowerCase();
-            document.querySelectorAll('.trend-tag').forEach(t => {
-                t.style.display = t.textContent.toLowerCase().includes(q) ? '' : 'none';
-            });
-            document.getElementById('trendTagList').style.display = 'flex';
         }
 
         function showMuscleDetail(muscle) {
@@ -783,11 +768,7 @@
         }
 
         renderAll();
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.trend-selector')) {
-                document.getElementById('trendTagList').style.display = 'none';
-            }
-        });
+        loadExerciseNames();
     </script>
 
     <div class="modal-overlay" id="muscleModal" onclick="if (event.target === this) this.classList.remove('show')">

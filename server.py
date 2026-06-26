@@ -167,6 +167,23 @@ def delete_record(date: str, user_id: int = Depends(get_current_user)):
     conn.close()
     return {"status": "ok"}
 
+@app.get("/api/exercises")
+def get_exercises(user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT data FROM records WHERE user_id = ?", (user_id,)
+    ).fetchall()
+    conn.close()
+    counts = {}
+    for row in rows:
+        exercises = json.loads(row["data"])
+        for ex in exercises:
+            name = ex.get("name", "")
+            if name:
+                counts[name] = counts.get(name, 0) + 1
+    sorted_exercises = sorted(counts.items(), key=lambda x: -x[1])
+    return {"exercises": [{"name": n, "count": c} for n, c in sorted_exercises]}
+
 @app.get("/manifest.json")
 def manifest():
     return FileResponse(os.path.join(os.path.dirname(__file__), "manifest.json"))
