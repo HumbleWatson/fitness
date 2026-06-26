@@ -279,7 +279,7 @@
             flex-wrap: wrap;
             gap: 6px;
             margin-bottom: 12px;
-            max-height: 140px;
+            max-height: 170px;
             overflow-y: auto;
         }
         .trend-list::-webkit-scrollbar { width: 3px; }
@@ -681,10 +681,17 @@
             document.getElementById('trendCharts').style.display = 'block';
             document.getElementById('trendPlaceholder').style.display = 'none';
 
-            const labels = data.map(d => d[0].slice(5));
-            const weights = data.map(d => d[1].weight);
-            const reps = data.map(d => d[1].reps);
-            const setCounts = data.map(d => d[1].sets);
+            let labels = data.map(d => d[0].slice(5));
+            let weights = data.map(d => d[1].weight);
+            let reps = data.map(d => d[1].reps);
+            let setCounts = data.map(d => d[1].sets);
+
+            if (labels.length === 1) {
+                labels = [labels[0], labels[0]];
+                weights = [weights[0], weights[0]];
+                reps = [reps[0], reps[0]];
+                setCounts = [setCounts[0], setCounts[0]];
+            }
 
             if (weightTrendChart) weightTrendChart.destroy();
             if (repsTrendChart) repsTrendChart.destroy();
