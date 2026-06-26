@@ -219,17 +219,6 @@
             box-shadow: inset 0 1px 1px rgba(255,255,255,0.2);
         }
 
-        .exercise-list-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
-        }
-
-        .exercise-list-item:last-child {
-            border-bottom: none;
-        }
-
         .modal-overlay {
             display: none;
             position: fixed;
@@ -285,6 +274,77 @@
         .modal-exercise:last-child { border-bottom: none; }
         .modal-exercise-name { color: rgba(255,255,255,0.85); }
         .modal-exercise-count { color: rgba(100,200,255,0.8); font-weight: 500; }
+        .trend-selector {
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .trend-selector input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 12px;
+            font-size: 15px;
+            color: #fff;
+            outline: none;
+        }
+        .trend-selector input::placeholder { color: rgba(255,255,255,0.4); }
+        .trend-selector input:focus {
+            background: rgba(255,255,255,0.1);
+            border-color: rgba(255,255,255,0.3);
+        }
+        .trend-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+            max-height: 140px;
+            overflow-y: auto;
+        }
+        .trend-list::-webkit-scrollbar { width: 3px; }
+        .trend-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+        .trend-tag {
+            padding: 6px 12px;
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 16px;
+            font-size: 13px;
+            color: rgba(255,255,255,0.7);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .trend-tag:hover { background: rgba(255,255,255,0.1); }
+        .trend-tag.active { background: rgba(255,255,255,0.15); border-color: rgba(78,205,196,0.5); color: #4ECDC4; }
+        .trend-charts { margin-top: 4px; }
+        .trend-chart-sm {
+            position: relative;
+            height: 130px;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 8px;
+        }
+        .trend-chart-sm:last-child { margin-bottom: 0; }
+        .trend-chart-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.35);
+            margin-bottom: 2px;
+            margin-left: 4px;
+        }
+        .exercise-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border-radius: 8px;
+            padding: 12px 8px;
+            margin: 0 -8px;
+        }
+        .exercise-list-item:hover { background: rgba(255,255,255,0.04); }
+        .exercise-list-item:last-child { border-bottom: none; }
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -337,6 +397,23 @@
         <div class="card-title">每日容量趋势</div>
         <div class="chart-container">
             <canvas id="volumeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="glass-card" id="trendCard">
+        <div class="card-title">动作趋势分析</div>
+        <div class="trend-selector">
+            <input type="text" id="trendSearch" placeholder="搜索或选择动作..." oninput="filterTrendList()" onfocus="document.getElementById('trendTagList').style.display='flex'">
+        </div>
+        <div class="trend-list" id="trendTagList"></div>
+        <div id="trendPlaceholder" class="empty-state">选择一个动作查看趋势</div>
+        <div class="trend-charts" id="trendCharts" style="display:none">
+            <div class="trend-chart-label">🏋️ 重量趋势 (kg)</div>
+            <div class="trend-chart-sm"><canvas id="weightTrendChart"></canvas></div>
+            <div class="trend-chart-label">🔁 次数趋势</div>
+            <div class="trend-chart-sm"><canvas id="repsTrendChart"></canvas></div>
+            <div class="trend-chart-label">📊 组数趋势</div>
+            <div class="trend-chart-sm"><canvas id="setsTrendChart"></canvas></div>
         </div>
     </div>
 
@@ -425,6 +502,8 @@
         let currentFilter = 'week';
         let volumeChart = null;
         let muscleExercisesDetail = {};
+        let weightTrendChart = null, repsTrendChart = null, setsTrendChart = null;
+        let allExerciseNames = [];
 
         function setFilter(filter) {
             currentFilter = filter;
@@ -566,20 +645,123 @@
                 }
             });
 
-            // Top exercises
+            // Trend exercise tag list
+            allExerciseNames = getAllExerciseNames();
+            const tagList = document.getElementById('trendTagList');
+            tagList.innerHTML = allExerciseNames.map(name =>
+                `<span class="trend-tag" onclick="selectTrendExercise('${name}')">${name}</span>`
+            ).join('');
+
+            // Top exercises — clickable to show trend
             const topContainer = document.getElementById('topExercises');
             const sorted = Object.entries(stats.exerciseCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
             if (sorted.length === 0) {
                 topContainer.innerHTML = '<div class="empty-state">暂无数据</div>';
             } else {
                 topContainer.innerHTML = sorted.map(([name, count], i) => `
-                    <div class="exercise-list-item">
+                    <div class="exercise-list-item" onclick="selectTrendExercise('${name}'); document.getElementById('trendCard').scrollIntoView({behavior:'smooth'});">
                         <span style="color: rgba(255,255,255,0.5); width: 24px;">${i + 1}</span>
                         <span style="flex: 1;">${name}</span>
                         <span style="color: rgba(100,200,255,0.8);">${count} 次</span>
                     </div>
                 `).join('');
             }
+        }
+
+        function getAllExerciseNames() {
+            const data = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
+            const names = new Set();
+            for (const exercises of Object.values(data)) {
+                for (const ex of exercises) names.add(ex.name);
+            }
+            return [...names].sort();
+        }
+
+        function getExerciseTrend(exerciseName) {
+            const data = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
+            const trend = {};
+            for (const [date, exercises] of Object.entries(data)) {
+                for (const ex of exercises) {
+                    if (ex.name !== exerciseName) continue;
+                    let maxWeight = 0, totalReps = 0, totalSets = 0;
+                    for (const s of ex.sets) {
+                        if (s.weight > maxWeight) maxWeight = s.weight;
+                        totalReps += s.reps * s.sets;
+                        totalSets += s.sets;
+                    }
+                    trend[date] = { weight: maxWeight, reps: totalReps, sets: totalSets };
+                }
+            }
+            return Object.entries(trend).sort((a, b) => a[0].localeCompare(b[0]));
+        }
+
+        function renderExerciseTrend(exerciseName) {
+            const data = getExerciseTrend(exerciseName);
+            if (data.length === 0) {
+                document.getElementById('trendCharts').style.display = 'none';
+                document.getElementById('trendPlaceholder').style.display = 'block';
+                document.getElementById('trendPlaceholder').textContent = '该动作暂无数据';
+                return;
+            }
+            document.getElementById('trendCharts').style.display = 'block';
+            document.getElementById('trendPlaceholder').style.display = 'none';
+
+            const labels = data.map(d => d[0].slice(5));
+            const weights = data.map(d => d[1].weight);
+            const reps = data.map(d => d[1].reps);
+            const setCounts = data.map(d => d[1].sets);
+
+            if (weightTrendChart) weightTrendChart.destroy();
+            if (repsTrendChart) repsTrendChart.destroy();
+            if (setsTrendChart) setsTrendChart.destroy();
+
+            function makeChart(id, values, color) {
+                const ctx = document.getElementById(id).getContext('2d');
+                return new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels,
+                        datasets: [{
+                            data: values,
+                            borderColor: color,
+                            backgroundColor: color + '30',
+                            borderWidth: 2,
+                            pointRadius: 3,
+                            pointBackgroundColor: color,
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, tooltip: { enabled: true } },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.4)', maxTicksLimit: 6, font: { size: 10 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.4)', font: { size: 10 } }, beginAtZero: id === 'setsTrendChart' }
+                        }
+                    }
+                });
+            }
+
+            weightTrendChart = makeChart('weightTrendChart', weights, 'rgba(255, 200, 100, 0.9)');
+            repsTrendChart = makeChart('repsTrendChart', reps, 'rgba(100, 255, 150, 0.9)');
+            setsTrendChart = makeChart('setsTrendChart', setCounts, 'rgba(100, 200, 255, 0.9)');
+        }
+
+        function selectTrendExercise(name) {
+            document.getElementById('trendSearch').value = name;
+            document.getElementById('trendTagList').style.display = 'none';
+            document.querySelectorAll('.trend-tag').forEach(t => t.classList.toggle('active', t.textContent === name));
+            renderExerciseTrend(name);
+        }
+
+        function filterTrendList() {
+            const q = document.getElementById('trendSearch').value.toLowerCase();
+            document.querySelectorAll('.trend-tag').forEach(t => {
+                t.style.display = t.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+            document.getElementById('trendTagList').style.display = 'flex';
         }
 
         function showMuscleDetail(muscle) {
@@ -601,6 +783,11 @@
         }
 
         renderAll();
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.trend-selector')) {
+                document.getElementById('trendTagList').style.display = 'none';
+            }
+        });
     </script>
 
     <div class="modal-overlay" id="muscleModal" onclick="if (event.target === this) this.classList.remove('show')">
