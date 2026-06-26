@@ -481,7 +481,6 @@
         let volumeChart = null;
         let muscleExercisesDetail = {};
         let weightTrendChart = null, repsTrendChart = null, setsTrendChart = null;
-        let allExerciseNames = [];
 
         function setFilter(filter) {
             currentFilter = filter;
@@ -623,6 +622,9 @@
                 }
             });
 
+            // Trend exercise tags — based on current filter
+            loadTrendTags(stats.exerciseCount);
+
             // Top exercises — clickable to show trend
             const topContainer = document.getElementById('topExercises');
             const sorted = Object.entries(stats.exerciseCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
@@ -639,43 +641,21 @@
             }
         }
 
-        async function loadExerciseNames() {
-            const token = localStorage.getItem('fitness_token');
-            let names = [];
-            if (token) {
-                try {
-                    const res = await fetch('/api/exercises', {headers: {'Authorization': `Bearer ${token}`}});
-                    if (res.ok) {
-                        const data = await res.json();
-                        names = data.exercises;
-                    }
-                } catch (e) {}
-            }
-            if (names.length === 0) {
-                const local = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
-                const counts = {};
-                for (const exercises of Object.values(local)) {
-                    for (const ex of exercises) {
-                        counts[ex.name] = (counts[ex.name] || 0) + 1;
-                    }
-                }
-                names = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([n, c]) => ({name: n, count: c}));
-            }
-            allExerciseNames = names;
+        function loadTrendTags(exerciseCount) {
+            const sorted = Object.entries(exerciseCount).sort((a, b) => b[1] - a[1]);
             const tagList = document.getElementById('trendTagList');
-            if (names.length === 0) {
+            if (sorted.length === 0) {
                 tagList.innerHTML = '<div class="empty-state" style="padding:20px">暂无动作数据</div>';
             } else {
-                tagList.innerHTML = names.map(ex =>
-                    `<span class="trend-tag" data-name="${ex.name}" onclick="selectTrendExercise('${ex.name}')">${ex.name} <span style="color:rgba(255,255,255,0.25);font-size:11px">${ex.count}</span></span>`
+                tagList.innerHTML = sorted.map(([name, count]) =>
+                    `<span class="trend-tag" data-name="${name}" onclick="selectTrendExercise('${name}')">${name} <span style="color:rgba(255,255,255,0.25);font-size:11px">${count}</span></span>`
                 ).join('');
             }
         }
 
-        function getExerciseTrend(exerciseName) {
-            const data = normalizeAllData(JSON.parse(localStorage.getItem('fitness') || '{}'));
+        function getExerciseTrend(exerciseName, filteredData) {
             const trend = {};
-            for (const [date, exercises] of Object.entries(data)) {
+            for (const [date, exercises] of Object.entries(filteredData)) {
                 for (const ex of exercises) {
                     if (ex.name !== exerciseName) continue;
                     let maxWeight = 0, totalReps = 0, totalSets = 0;
@@ -690,8 +670,8 @@
             return Object.entries(trend).sort((a, b) => a[0].localeCompare(b[0]));
         }
 
-        function renderExerciseTrend(exerciseName) {
-            const data = getExerciseTrend(exerciseName);
+        function renderExerciseTrend(exerciseName, filteredData) {
+            const data = getExerciseTrend(exerciseName, filteredData);
             if (data.length === 0) {
                 document.getElementById('trendCharts').style.display = 'none';
                 document.getElementById('trendPlaceholder').style.display = 'block';
@@ -746,7 +726,7 @@
 
         function selectTrendExercise(name) {
             document.querySelectorAll('.trend-tag').forEach(t => t.classList.toggle('active', t.dataset.name === name));
-            renderExerciseTrend(name);
+            renderExerciseTrend(name, getFilteredData());
         }
 
         function showMuscleDetail(muscle) {
@@ -768,7 +748,6 @@
         }
 
         renderAll();
-        loadExerciseNames();
     </script>
 
     <div class="modal-overlay" id="muscleModal" onclick="if (event.target === this) this.classList.remove('show')">
