@@ -851,7 +851,10 @@ async function resolveUnknowns() {
       throw new Error('解析失败');
     }
     const data = await res.json();
-    const parsedFoods = data.results || data.foods || [];
+    let parsedFoods = [];
+    if (data.result) {
+      try { parsedFoods = JSON.parse(data.result); } catch(e) {}
+    }
     for (const pf of parsedFoods) {
       const found = unknowns.find(u => u.name === pf.original_name || u.name === pf.name);
       if (found) {
