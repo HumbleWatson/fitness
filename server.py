@@ -246,13 +246,21 @@ def diet_chat(req: GenericRequest, user_id: int = Depends(get_current_user)):
 def call_ai(action: str, req, user_id):
     system_prompt = SYSTEM_PROMPTS[action]
     messages = [{"role": "system", "content": system_prompt}]
-    content = json.dumps(req.model_dump(exclude_none=True), ensure_ascii=False)
-    messages.append({"role": "user", "content": content})
-    payload = {"model": AI_MODEL, "messages": messages, "temperature": 0.7, "stream": False}
+    c = json.dumps(req.model_dump(exclude_none=True), ensure_ascii=False)
+    messages.append({"role": "user", "content": c})
+    payload = {"model": AI_MODEL, "messages": messages, "temperature": 0.7}
     try:
-        resp = http_requests.post(AI_BASE, json=payload, timeout=30)
-        result = resp.json()
-        content = result["choices"][0]["message"]["content"]
+        resp = http_requests.post(AI_BASE, json=payload, stream=True, timeout=60)
+        content = ""
+        for line in resp.iter_lines():
+            if line:
+                d = line.decode()
+                if d.startswith("data: ") and d != "data: [DONE]":
+                    try:
+                        chunk = json.loads(d[6:])
+                        delta = chunk.get("choices", [{}])[0].get("delta", {}).get("content", "")
+                        if delta: content += delta
+                    except: pass
         return {"result": content}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"AI 服务暂不可用: {str(e)}")
