@@ -634,38 +634,38 @@ function goToday() {
   loadDiet(state.date).then(render);
 }
 
-function parseAndAdd() {
+async function parseAndAdd() {
   const text = document.getElementById('rawTextInput').value.trim();
   if (!text) return;
-  const parsed = parseDietText(text);
-  if (!parsed || parsed.length === 0) {
-    alert('未能识别有效的食物信息，请检查格式');
-    return;
-  }
-  parsed.forEach(meal => {
-    meal.foods = meal.foods.filter(f => f !== null);
-  });
-  const validMeals = parsed.filter(m => m.foods.length > 0);
-  if (validMeals.length === 0) {
-    alert('未能识别有效的食物信息，请检查格式');
-    return;
-  }
-  for (const meal of validMeals) {
-    if (!meal.meal || meal.meal === '加餐') {
-      meal.meal = '加餐';
+  try {
+    const res = await fetchWithAuth('/api/diet/parse', {
+      method: 'POST',
+      body: JSON.stringify({ text })
+    });
+    if (!res.ok) {
+      if (res.status === 503) throw new Error('AI服务暂不可用');
+      throw new Error('解析失败');
     }
-    const existing = state.meals.find(m => m.meal === meal.meal);
-    if (existing) {
-      existing.foods.push(...meal.foods);
-    } else {
-      state.meals.push(meal);
+    const data = await res.json();
+    let meals = [];
+    try { meals = JSON.parse(data.result); } catch(e) {}
+    if (!meals.length) { alert('AI未能解析出有效食物，请重试'); return; }
+    for (const meal of meals) {
+      if (!meal.meal) meal.meal = '加餐';
+      if (!meal.foods) meal.foods = [];
+      meal.foods.forEach(f => { f.weight = f.weight_g || 0; });
+      const existing = state.meals.find(m => m.meal === meal.meal);
+      if (existing) existing.foods.push(...meal.foods);
+      else state.meals.push(meal);
     }
-  }
-  state.rawText = text;
-  saveDiet().then(() => {
+    state.rawText = text;
+    await saveDiet();
     render();
-    document.getElementById('rawTextInput').value = text;
-  });
+    document.getElementById('rawTextInput').value = '';
+  } catch(e) {
+    if (e.message === '请先登录') { window.location.href = '/index.html'; return; }
+    showError('解析失败: ' + e.message);
+  }
 }
 
 function clearRawText() {

@@ -656,7 +656,7 @@
         }
 
         .nav-link {
-            padding: 10px 16px;
+            padding: 8px 14px;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 10px;
@@ -669,6 +669,13 @@
 
         .nav-link:hover {
             background: rgba(255, 255, 255, 0.12);
+        }
+
+        .nav-row {
+            display: flex;
+            gap: 8px;
+            margin-top: -8px;
+            margin-bottom: 16px;
         }
 
         .user-bar {
@@ -730,10 +737,12 @@
             <span class="user-name" id="userName"></span>
             <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.16</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
-            <a href="stats.html" class="nav-link">📊</a>
-            <a href="diet.html" class="nav-link">🥗</a>
-            <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
         </div>
+    </div>
+    <div class="nav-row">
+        <a href="stats.html" class="nav-link">📊 分析</a>
+        <a href="diet.html" class="nav-link">🥗 饮食</a>
+        <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
     </div>
     
     <div class="glass-card">
