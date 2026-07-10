@@ -57,6 +57,18 @@ def init_db():
 
 init_db()
 
+def migrate_profile():
+    conn = get_db()
+    for col in ["height", "weight", "goal"]:
+        try:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} TEXT")
+        except:
+            pass
+    conn.commit()
+    conn.close()
+
+migrate_profile()
+
 def hash_password(password: str) -> str:
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -98,6 +110,11 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+class ProfileRequest(BaseModel):
+    height: Optional[float] = None
+    weight: Optional[float] = None
+    goal: Optional[str] = None
+
 class SyncRequest(BaseModel):
     data: dict
     last_sync: Optional[str] = None
@@ -131,6 +148,27 @@ def login(req: LoginRequest):
         raise HTTPException(status_code=401, detail="用户名或密码错误")
     token = create_token(user["id"])
     return {"token": token, "username": req.username}
+
+@app.get("/api/profile")
+def get_profile(user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute("SELECT height, weight, goal FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    return {"height": row["height"], "weight": row["weight"], "goal": row["goal"]}
+
+@app.put("/api/profile")
+def update_profile(req: ProfileRequest, user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    updates = {}
+    if req.height is not None: updates["height"] = req.height
+    if req.weight is not None: updates["weight"] = req.weight
+    if req.goal is not None: updates["goal"] = req.goal
+    if updates:
+        sets = ", ".join(f"{k}=?" for k in updates)
+        conn.execute(f"UPDATE users SET {sets} WHERE id=?", list(updates.values()) + [user_id])
+        conn.commit()
+    conn.close()
+    return {"status": "ok"}
 
 @app.get("/api/records")
 def get_records(user_id: int = Depends(get_current_user)):
