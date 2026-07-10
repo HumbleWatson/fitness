@@ -138,6 +138,7 @@ deploy: SSH → 服务器 → git pull → docker build → compose up -d
 | v1.13 | 动作趋势分析（重量/次数/组数三维图） |
 | v1.14 | 标签列表增高，单点画线段 |
 | v1.15 | CI/CD — GitHub Actions + SSH 部署 |
+| v1.16 | 饮食记录页面 — 文本录入、营养解析、AI 分析/对话 |
 
 ## 动作名规范化
 
