@@ -673,6 +673,7 @@
 
         .nav-row {
             display: flex;
+            justify-content: space-between;
             gap: 8px;
             margin-top: -8px;
             margin-bottom: 16px;
@@ -740,8 +741,10 @@
         </div>
     </div>
     <div class="nav-row">
-        <a href="stats.html" class="nav-link">📊 分析</a>
-        <a href="diet.html" class="nav-link">🥗 饮食</a>
+        <div style="display:flex;gap:8px;">
+            <a href="stats.html" class="nav-link">📊 分析</a>
+            <a href="diet.html" class="nav-link">🥗 饮食</a>
+        </div>
         <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
     </div>
     

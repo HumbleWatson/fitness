@@ -32,8 +32,15 @@ body {
   -webkit-font-smoothing:antialiased;
 }
 .page-header {
-  display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;
+  margin-bottom:8px;
 }
+.header-actions { display:flex; gap:8px; align-items:center; }
+.nav-btn {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+  border-radius:10px; color:#fff; padding:8px 14px; font-size:14px; cursor:pointer;
+  backdrop-filter:blur(20px); transition:all 0.2s ease; text-decoration:none; display:inline-flex; align-items:center; gap:4px;
+}
+.nav-btn:hover { background:rgba(255,255,255,0.12); }
 h1 {
   font-size:34px; font-weight:700; margin:0;
   background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.8) 100%);
@@ -258,10 +265,14 @@ h1 {
 
 <div class="page-header">
   <h1>饮食记录</h1>
-  <div class="header-actions">
-    <a href="/" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:18px;margin-right:4px;" title="返回训练">🏋️</a>
-    <button class="icon-btn" onclick="openSettingsModal()" title="设置">⚙️</button>
-    <button class="icon-btn btn-ai" onclick="analyzeDiet()" id="analyzeBtn" style="font-size:13px;padding:8px 14px;">✨ AI分析</button>
+</div>
+<div class="nav-row" style="display:flex;align-items:center;margin-bottom:16px;">
+  <div style="display:flex;gap:8px;">
+    <a href="/" class="nav-btn" title="返回训练">🏋️ 主页</a>
+    <button class="nav-btn" onclick="openSettingsModal()" title="设置">⚙️ 设置</button>
+  </div>
+  <div style="margin-left:auto;">
+    <button class="nav-btn btn-ai" onclick="analyzeDiet()" id="analyzeBtn" style="background:linear-gradient(135deg,rgba(90,200,250,0.25),rgba(0,122,255,0.25));border-color:rgba(90,200,250,0.3);">✨ AI分析</button>
   </div>
 </div>
 
