@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1a1a3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+<title>饮食记录</title>
+<script src="/static/food-db.js"></script>
+<script src="/static/diet-parser.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html { background:#0d0d24; }
+body {
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",sans-serif;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 20% 50%, rgba(100,150,255,0.25) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 20%, rgba(150,100,255,0.2) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 80%, rgba(100,200,180,0.15) 0%, transparent 50%),
+    linear-gradient(135deg, #0a0a1a 0%, #1a1a3a 50%, #0a1525 100%);
+  color:#fff;
+  max-width:430px;
+  margin:0 auto;
+  padding:calc(20px + env(safe-area-inset-top,0px)) calc(16px + env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) calc(16px + env(safe-area-inset-left,0px));
+  -webkit-font-smoothing:antialiased;
+}
+.page-header {
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;
+}
+h1 {
+  font-size:34px; font-weight:700; margin:0;
+  background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.8) 100%);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:-0.5px;
+}
+.header-actions { display:flex; gap:8px; align-items:center; }
+.icon-btn {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+  border-radius:10px; color:#fff; padding:8px 12px; font-size:16px; cursor:pointer;
+  backdrop-filter:blur(20px); transition:all 0.2s ease;
+}
+.icon-btn:hover { background:rgba(255,255,255,0.12); }
+.glass-card {
+  background:rgba(255,255,255,0.08);
+  backdrop-filter:blur(60px) saturate(200%);
+  -webkit-backdrop-filter:blur(60px) saturate(200%);
+  border-radius:24px; padding:20px; margin-bottom:16px;
+  border:1px solid rgba(255,255,255,0.25);
+  box-shadow:0 8px 32px rgba(0,0,0,0.2), inset 0 1px 1px rgba(255,255,255,0.35), inset 0 -1px 1px rgba(255,255,255,0.1);
+  position:relative; overflow:hidden;
+}
+.glass-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);
+}
+.glass-card::after {
+  content:''; position:absolute; top:-80%; left:-20%; width:140%; height:100%;
+  background:radial-gradient(ellipse at 50% 0%,rgba(255,255,255,0.15) 0%,transparent 60%);
+  pointer-events:none;
+}
+.form-title {
+  font-size:17px; font-weight:600; margin-bottom:16px; color:rgba(255,255,255,0.85);
+}
+.date-row {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.date-nav {
+  display:flex; align-items:center; gap:8px;
+}
+.date-nav-btn {
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+  border-radius:8px; color:#fff; width:36px; height:36px; font-size:18px;
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s ease;
+}
+.date-nav-btn:hover { background:rgba(255,255,255,0.1); }
+.date-text { font-size:16px; font-weight:500; min-width:120px; text-align:center; }
+.today-btn {
+  background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.2);
+  border-radius:8px; color:rgba(255,255,255,0.7); padding:6px 14px; font-size:13px;
+  cursor:pointer; transition:all 0.2s ease;
+}
+.today-btn:hover { background:rgba(255,255,255,0.12); }
+.summary-grid { display:flex; gap:8px; margin-top:12px; }
+.summary-item { flex:1; text-align:center; background:rgba(255,255,255,0.06); border-radius:16px; padding:12px 4px; }
+.summary-item .val { font-size:20px; font-weight:600; }
+.summary-item .lbl { font-size:10px; color:rgba(255,255,255,0.5); margin-top:2px; white-space:nowrap; }
+.progress-bar { height:4px; border-radius:2px; background:rgba(255,255,255,0.1); margin-top:6px; overflow:hidden; }
+.progress-bar .fill { height:100%; border-radius:2px; transition:width 0.4s ease; }
+.fill-orange { background:#ff9500; }
+.fill-blue { background:#5ac8fa; }
+.fill-green { background:#34c759; }
+.fill-red { background:#ff3b30; }
+.meal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.meal-name { font-size:16px; font-weight:600; }
+.meal-cal { font-size:14px; color:rgba(255,255,255,0.6); }
+.meal-toggle { cursor:pointer; color:rgba(255,255,255,0.4); font-size:12px; margin-left:8px; background:none; border:none; }
+.food-list { }
+.food-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 0; border-top:1px solid rgba(255,255,255,0.06); font-size:14px;
+}
+.food-row:first-child { border-top:none; }
+.food-left { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.food-name { font-weight:500; }
+.food-weight { color:rgba(255,255,255,0.4); font-size:12px; }
+.food-nutri { display:flex; gap:8px; font-size:12px; color:rgba(255,255,255,0.6); }
+.food-nutri span { white-space:nowrap; }
+.food-actions { display:flex; gap:4px; align-items:center; }
+.food-del-btn {
+  background:rgba(255,59,48,0.15); border:1px solid rgba(255,59,48,0.25);
+  border-radius:6px; color:rgba(255,100,100,0.9); width:24px; height:24px;
+  font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  transition:all 0.2s ease; padding:0;
+}
+.food-del-btn:hover { background:rgba(255,59,48,0.25); }
+.tag-unknown {
+  display:inline-block; background:rgba(255,59,48,0.15); color:#ff3b30;
+  border-radius:10px; padding:2px 10px; font-size:11px;
+}
+.add-food-btn {
+  width:100%; padding:10px; margin-top:8px;
+  background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.25);
+  border-radius:10px; font-size:14px; color:rgba(255,255,255,0.5);
+  cursor:pointer; transition:all 0.2s ease; text-align:center;
+}
+.add-food-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); }
+.add-meal-btn {
+  width:100%; padding:14px; margin-bottom:16px;
+  background:rgba(255,255,255,0.04); border:1px dashed rgba(255,255,255,0.25);
+  border-radius:14px; font-size:14px; color:rgba(255,255,255,0.5);
+  cursor:pointer; transition:all 0.2s ease; text-align:center;
+}
+.add-meal-btn:hover { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); }
+.input-area textarea {
+  width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+  border-radius:12px; color:#fff; font-size:15px; padding:14px; resize:vertical;
+  font-family:inherit; outline:none; min-height:100px;
+}
+.input-area textarea::placeholder { color:rgba(255,255,255,0.3); }
+.btn-row { display:flex; gap:8px; margin-top:10px; }
+.btn {
+  flex:1; padding:12px; border-radius:12px; font-size:15px; font-weight:500;
+  cursor:pointer; transition:all 0.2s ease; text-align:center;
+}
+.btn-secondary {
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+  color:rgba(255,255,255,0.7);
+}
+.btn-secondary:hover { background:rgba(255,255,255,0.1); }
+.btn-primary {
+  background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35);
+  color:#fff; box-shadow:inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn-primary:hover { background:rgba(255,255,255,0.2); }
+.btn-ai {
+  background:linear-gradient(135deg,rgba(90,200,250,0.3),rgba(0,122,255,0.3));
+  border:1px solid rgba(90,200,250,0.4); color:#fff;
+  box-shadow:inset 0 1px 1px rgba(255,255,255,0.2);
+}
+.btn-ai:hover { background:linear-gradient(135deg,rgba(90,200,250,0.4),rgba(0,122,255,0.4)); }
+.input-hint {
+  margin-top:10px; font-size:12px; color:rgba(255,255,255,0.3); line-height:1.5;
+}
+.input-hint code {
+  background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px;
+}
+.ai-panel { margin-top:16px; }
+.ai-messages { max-height:300px; overflow-y:auto; margin-bottom:12px; }
+.ai-messages::-webkit-scrollbar { width:4px; }
+.ai-messages::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.3); border-radius:2px; }
+.ai-msg {
+  background:rgba(255,255,255,0.05); border-radius:16px; padding:14px;
+  font-size:14px; line-height:1.6; color:rgba(255,255,255,0.85); margin-bottom:10px;
+}
+.ai-msg.ai-user {
+  background:rgba(90,200,250,0.08); border:1px solid rgba(90,200,250,0.15);
+}
+.ai-msg .label { font-size:11px; color:rgba(255,255,255,0.35); margin-bottom:6px; }
+.chat-input { display:flex; gap:8px; }
+.chat-input input {
+  flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15);
+  border-radius:20px; color:#fff; padding:10px 14px; font-size:14px; outline:none;
+}
+.chat-input input::placeholder { color:rgba(255,255,255,0.3); }
+.chat-input input:focus { border-color:rgba(255,255,255,0.3); }
+.chat-send-btn {
+  background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3);
+  border-radius:20px; color:#fff; padding:10px 18px; font-size:14px; cursor:pointer;
+  transition:all 0.2s ease; white-space:nowrap;
+}
+.chat-send-btn:hover { background:rgba(255,255,255,0.18); }
+.chat-send-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.modal-overlay {
+  display:none; position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,0.5); backdrop-filter:blur(8px); z-index:200;
+  justify-content:center; align-items:center;
+  padding:max(20px,env(safe-area-inset-top,20px)) max(20px,env(safe-area-inset-right,20px)) max(20px,env(safe-area-inset-bottom,20px)) max(20px,env(safe-area-inset-left,20px));
+}
+.modal-overlay.active { display:flex; }
+.modal-content {
+  width:100%; max-width:400px; max-height:80vh;
+  background:rgba(30,30,50,0.85); backdrop-filter:blur(60px) saturate(200%);
+  border-radius:24px; padding:24px; border:1px solid rgba(255,255,255,0.25);
+  box-shadow:0 24px 64px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.2);
+  overflow-y:auto;
+}
+.modal-title { font-size:20px; font-weight:600; margin-bottom:20px; color:rgba(255,255,255,0.85); }
+.modal-field { margin-bottom:16px; }
+.modal-field label { display:block; font-size:13px; color:rgba(255,255,255,0.5); margin-bottom:6px; }
+.modal-field input, .modal-field select {
+  width:100%; padding:14px 16px; background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.15); border-radius:12px;
+  font-size:16px; color:#fff; outline:none;
+}
+.modal-field input::placeholder { color:rgba(255,255,255,0.4); }
+.modal-field select option { background:#1a1a3a; color:#fff; }
+.modal-buttons { display:flex; gap:12px; margin-top:20px; }
+.modal-btn {
+  flex:1; padding:14px; border-radius:12px; font-size:16px; font-weight:500;
+  cursor:pointer; transition:all 0.2s ease; text-align:center;
+}
+.modal-btn.cancel { background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.7); }
+.modal-btn.confirm { background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.35); color:#fff; box-shadow:inset 0 1px 1px rgba(255,255,255,0.2); }
+.loading { opacity:0.5; pointer-events:none; }
+.error-msg { color:#ff3b30; font-size:13px; padding:8px 0; }
+.unknown-badge {
+  display:inline-block; background:rgba(255,200,0,0.15); color:#ffcc00;
+  border-radius:10px; padding:2px 8px; font-size:10px; margin-left:4px;
+}
+.add-food-modal-row { display:flex; gap:8px; margin-bottom:8px; align-items:center; flex-wrap:wrap; }
+.add-food-modal-row input, .add-food-modal-row select {
+  padding:10px 12px; background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:#fff; font-size:14px; outline:none;
+}
+.add-food-modal-row input::placeholder { color:rgba(255,255,255,0.4); }
+.add-food-modal-row select option { background:#1a1a3a; }
+.food-name-input { flex:2; min-width:80px; }
+.food-amount-input { flex:1; min-width:60px; }
+.food-unit-select { flex:1; min-width:60px; }
+.ai-status {
+  font-size:13px; color:rgba(255,255,255,0.4); text-align:center; padding:12px;
+}
+.empty-state {
+  text-align:center; padding:20px; color:rgba(255,255,255,0.35); font-size:14px;
+}
+.analyze-btn-wrap { margin-top:12px; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>饮食记录</h1>
+  <div class="header-actions">
+    <button class="icon-btn" onclick="openSettingsModal()" title="设置">⚙️</button>
+    <button class="icon-btn btn-ai" onclick="analyzeDiet()" id="analyzeBtn" style="font-size:13px;padding:8px 14px;">✨ AI分析</button>
+  </div>
+</div>
+
+<div class="glass-card">
+  <div class="date-row">
+    <div class="date-nav">
+      <button class="date-nav-btn" onclick="setDate(-1)">‹</button>
+      <span class="date-text" id="dateText"></span>
+      <button class="date-nav-btn" onclick="setDate(1)">›</button>
+    </div>
+    <button class="today-btn" onclick="goToday()">今天</button>
+  </div>
+</div>
+
+<div class="glass-card" id="summaryCard">
+  <div class="form-title">今日总计 <span id="summaryTarget" style="font-size:13px;font-weight:400;color:rgba(255,255,255,0.4);">目标 2000 kcal</span></div>
+  <div class="summary-grid">
+    <div class="summary-item">
+      <div class="val" style="color:#ff9500;" id="sumCal">0</div>
+      <div class="lbl">热量 kcal</div>
+      <div class="progress-bar"><div class="fill fill-orange" id="progCal" style="width:0%"></div></div>
+    </div>
+    <div class="summary-item">
+      <div class="val" style="color:#5ac8fa;" id="sumPro">0</div>
+      <div class="lbl">蛋白 g</div>
+      <div class="progress-bar"><div class="fill fill-blue" id="progPro" style="width:0%"></div></div>
+    </div>
+    <div class="summary-item">
+      <div class="val" style="color:#34c759;" id="sumFat">0</div>
+      <div class="lbl">脂肪 g</div>
+      <div class="progress-bar"><div class="fill fill-green" id="progFat" style="width:0%"></div></div>
+    </div>
+    <div class="summary-item">
+      <div class="val" style="color:#ff3b30;" id="sumCarbs">0</div>
+      <div class="lbl">碳水 g</div>
+      <div class="progress-bar"><div class="fill fill-red" id="progCarbs" style="width:0%"></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="mealContainer"></div>
+
+<button class="add-meal-btn" onclick="addMeal()">+ 添加一餐</button>
+
+<div class="glass-card input-area">
+  <div class="form-title">📝 文本录入</div>
+  <textarea id="rawTextInput" placeholder="例如：&#10;晚餐：牛肉150g 米饭1碗 青菜200g&#10;加餐：蛋白粉1勺 香蕉1根"></textarea>
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="parseAndAdd()">解析并添加</button>
+    <button class="btn btn-secondary" onclick="clearRawText()">清空</button>
+  </div>
+  <div class="input-hint">
+    支持格式：<code>餐名：食物名 数量+单位</code> 如 <code>鸡胸肉 200g</code> <code>鸡蛋 2个</code>
+  </div>
+</div>
+
+<div class="glass-card" id="aiPanel">
+  <div class="form-title">🤖 AI 分析</div>
+  <div id="aiProfile" style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:12px;"></div>
+  <div class="ai-panel">
+    <div class="ai-messages" id="aiMessages"></div>
+    <div class="chat-input">
+      <input type="text" id="chatInput" placeholder="问 AI 关于饮食的问题…" onkeydown="if(event.key==='Enter')sendChat()">
+      <button class="chat-send-btn" id="sendChatBtn" onclick="sendChat()">发送</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal-content">
+    <div class="modal-title">⚙️ 个人设置</div>
+    <div class="modal-field">
+      <label>身高 (cm)</label>
+      <input type="number" id="inputHeight" placeholder="例如 175" step="0.1">
+    </div>
+    <div class="modal-field">
+      <label>体重 (kg)</label>
+      <input type="number" id="inputWeight" placeholder="例如 70" step="0.1">
+    </div>
+    <div class="modal-field">
+      <label>目标</label>
+      <select id="inputGoal">
+        <option value="gain">增肌</option>
+        <option value="maintain">维持</option>
+        <option value="lose">减脂</option>
+      </select>
+    </div>
+    <div class="modal-buttons">
+      <button class="modal-btn cancel" onclick="closeSettingsModal()">取消</button>
+      <button class="modal-btn confirm" onclick="saveSettings()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="addFoodModal">
+  <div class="modal-content">
+    <div class="modal-title" id="addFoodModalTitle">添加食物</div>
+    <div class="add-food-modal-row">
+      <input class="food-name-input" id="addFoodName" placeholder="食物名称">
+      <input class="food-amount-input" type="number" id="addFoodAmount" placeholder="数量" step="0.1">
+      <select class="food-unit-select" id="addFoodUnit">
+        <option value="g">克 (g)</option>
+        <option value="ml">毫升 (ml)</option>
+        <option value="个">个</option>
+        <option value="片">片</option>
+        <option value="碗">碗</option>
+        <option value="根">根</option>
+        <option value="勺">勺</option>
+        <option value="杯">杯</option>
+      </select>
+    </div>
+    <div id="addFoodSuggestion" style="font-size:12px;color:rgba(255,255,255,0.4);margin-bottom:8px;min-height:18px;"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn cancel" onclick="closeAddFoodModal()">取消</button>
+      <button class="modal-btn confirm" onclick="confirmAddFood()">添加</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const state = {
+  date: new Date().toISOString().slice(0,10),
+  meals: [],
+  rawText: '',
+  profile: { height: null, weight: null, goal: 'maintain' },
+  aiMessages: [],
+  unknownFoods: [],
+};
+
+let addFoodTargetMeal = null;
+
+function authHeaders() {
+  const token = localStorage.getItem('fitness_token');
+  if (!token) return {};
+  return { 'Authorization': `Bearer ${token}` };
+}
+
+async function fetchWithAuth(url, options = {}) {
+  const headers = { ...authHeaders(), 'Content-Type': 'application/json', ...options.headers };
+  const res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    throw new Error('请先登录');
+  }
+  return res;
+}
+
+async function init() {
+  try { await loadProfile(); } catch (e) {}
+  try { await loadDiet(state.date); } catch (e) { console.error('loadDiet error', e); }
+  render();
+}
+
+async function loadProfile() {
+  try {
+    const res = await fetchWithAuth('/api/profile');
+    if (!res.ok) return;
+    const data = await res.json();
+    state.profile.height = data.height;
+    state.profile.weight = data.weight;
+    state.profile.goal = data.goal || 'maintain';
+  } catch (e) {
+    console.error('loadProfile error:', e);
+  }
+}
+
+async function saveProfile() {
+  const height = parseFloat(document.getElementById('inputHeight').value) || null;
+  const weight = parseFloat(document.getElementById('inputWeight').value) || null;
+  const goal = document.getElementById('inputGoal').value;
+  if (!height || !weight) { alert('请填写身高和体重'); return; }
+  try {
+    const res = await fetchWithAuth('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify({ height, weight, goal })
+    });
+    if (!res.ok) throw new Error('保存失败');
+    state.profile = { height, weight, goal };
+    closeSettingsModal();
+    render();
+  } catch (e) {
+    showError('设置保存失败: ' + (e.message || '网络错误'));
+  }
+}
+
+async function loadDiet(date) {
+  try {
+    const res = await fetchWithAuth(`/api/diet/${date}`);
+    if (res.status === 404) {
+      state.meals = [];
+      state.rawText = '';
+      return;
+    }
+    if (!res.ok) throw new Error('加载失败');
+    const data = await res.json();
+    state.meals = data.meals || [];
+    state.rawText = data.raw_text || '';
+    document.getElementById('rawTextInput').value = state.rawText;
+  } catch (e) {
+    if (e.message === '请先登录') {
+      showError('请先登录');
+    }
+    state.meals = [];
+  }
+}
+
+async function saveDiet() {
+  try {
+    const res = await fetchWithAuth(`/api/diet/${state.date}`, {
+      method: 'PUT',
+      body: JSON.stringify({ meals: state.meals, raw_text: state.rawText })
+    });
+    if (!res.ok) throw new Error('保存失败');
+  } catch (e) {
+    console.error('saveDiet error:', e);
+  }
+}
+
+function getTargets() {
+  const w = state.profile.weight;
+  if (!w) return { cal: 2000, protein: 100, fat: 65, carbs: 250 };
+  let cal, protein;
+  switch (state.profile.goal) {
+    case 'gain':
+      cal = w * 33;
+      protein = w * 1.8;
+      break;
+    case 'lose':
+      cal = w * 22;
+      protein = w * 2.0;
+      break;
+    default:
+      cal = w * 28;
+      protein = w * 1.5;
+  }
+  const fat = Math.round((cal * 0.25) / 9 * 10) / 10;
+  const carbs = Math.round((cal - protein * 4 - fat * 9) / 4 * 10) / 10;
+  return {
+    cal: Math.round(cal),
+    protein: Math.round(protein * 10) / 10,
+    fat: Math.round(fat * 10) / 10,
+    carbs: Math.round(carbs * 10) / 10,
+  };
+}
+
+function summarizeMealsLocal(meals) {
+  const total = { calories: 0, protein: 0, fat: 0, carbs: 0 };
+  for (const meal of meals) {
+    for (const food of meal.foods) {
+      if (!food.unknown) {
+        total.calories += food.calories || 0;
+        total.protein += food.protein || 0;
+        total.fat += food.fat || 0;
+        total.carbs += food.carbs || 0;
+      }
+    }
+  }
+  total.calories = Math.round(total.calories);
+  total.protein = Math.round(total.protein * 10) / 10;
+  total.fat = Math.round(total.fat * 10) / 10;
+  total.carbs = Math.round(total.carbs * 10) / 10;
+  return total;
+}
+
+function render() {
+  const targets = getTargets();
+  const total = summarizeMealsLocal(state.meals);
+  const unknownFoods = [];
+  for (const meal of state.meals) {
+    for (const food of meal.foods) {
+      if (food.unknown) unknownFoods.push({ meal: meal.meal, food });
+    }
+  }
+
+  // Date
+  const d = new Date(state.date + 'T12:00:00');
+  const weekdays = ['日','一','二','三','四','五','六'];
+  document.getElementById('dateText').textContent = `${state.date} 周${weekdays[d.getDay()]}`;
+
+  // Summary
+  document.getElementById('sumCal').textContent = total.calories;
+  document.getElementById('sumPro').textContent = total.protein;
+  document.getElementById('sumFat').textContent = total.fat;
+  document.getElementById('sumCarbs').textContent = total.carbs;
+  document.getElementById('summaryTarget').textContent = `目标 ${targets.cal} kcal`;
+
+  document.getElementById('progCal').style.width = Math.min(100, (total.calories / targets.cal) * 100) + '%';
+  document.getElementById('progPro').style.width = Math.min(100, (total.protein / targets.protein) * 100) + '%';
+  document.getElementById('progFat').style.width = Math.min(100, (total.fat / targets.fat) * 100) + '%';
+  document.getElementById('progCarbs').style.width = Math.min(100, (total.carbs / targets.carbs) * 100) + '%';
+
+  // Meal cards
+  const container = document.getElementById('mealContainer');
+  if (state.meals.length === 0) {
+    container.innerHTML = '<div class="glass-card"><div class="empty-state">暂无饮食记录<br>使用文本录入或添加一餐开始记录</div></div>';
+  } else {
+    container.innerHTML = state.meals.map((meal, mi) => {
+      const cal = meal.foods.reduce((s, f) => s + (f.calories || 0), 0);
+      const foodsHtml = meal.foods.map((food, fi) => {
+        const isUnknown = food.unknown;
+        const weightStr = food.weight ? `${food.weight}${food.unit || 'g'}` : '';
+        const nutriHtml = isUnknown
+          ? '<span style="color:rgba(255,255,255,0.25);">待解析</span>'
+          : `<span>🔥${food.calories || 0}</span><span>🥩${food.protein || 0}g</span><span>🧈${food.fat || 0}g</span><span>🌾${food.carbs || 0}g</span>`;
+        return `<div class="food-row">
+          <div class="food-left">
+            <span class="food-name" style="${isUnknown ? 'color:rgba(255,255,255,0.4);' : ''}">${food.name}${isUnknown ? '<span class="unknown-badge">待解析</span>' : ''}</span>
+            <span class="food-weight">${weightStr}</span>
+          </div>
+          <div class="food-actions">
+            <div class="food-nutri">${nutriHtml}</div>
+            <button class="food-del-btn" onclick="deleteFood(${mi}, ${fi})" title="删除">×</button>
+          </div>
+        </div>`;
+      }).join('');
+
+      return `<div class="glass-card meal-card">
+        <div class="meal-header">
+          <span class="meal-name">${meal.meal}</span>
+          <span class="meal-cal">${cal} kcal</span>
+        </div>
+        <div class="food-list">${foodsHtml}</div>
+        <button class="add-food-btn" onclick="openAddFoodModal(${mi})">+ 添加食物</button>
+      </div>`;
+    }).join('');
+  }
+
+  // AI profile line
+  const p = state.profile;
+  const profileText = (p.height && p.weight)
+    ? `基于 身高${p.height}cm · 体重${p.weight}kg · ${({gain:'增肌',maintain:'维持',lose:'减脂'})[p.goal] || '维持'}`
+    : '请先设置身高体重';
+  document.getElementById('aiProfile').textContent = profileText;
+
+  // AI messages
+  renderAIMessages();
+
+  // Show unknown resolve prompt in food list
+  if (unknownFoods.length > 0) {
+    const existing = document.getElementById('unknownResolveBanner');
+    if (!existing) {
+      const banner = document.createElement('div');
+      banner.id = 'unknownResolveBanner';
+      banner.style.cssText = 'margin-bottom:16px;';
+      banner.innerHTML = `<div class="glass-card" style="padding:14px;text-align:center;">
+        <span style="font-size:13px;color:rgba(255,200,0,0.8);">⚠️ ${unknownFoods.length} 个食物待解析</span>
+        <button class="btn btn-ai" style="display:inline-block;padding:8px 16px;font-size:13px;margin-left:8px;" onclick="resolveUnknowns()">🤖 AI解析</button>
+      </div>`;
+      container.parentNode.insertBefore(banner, container);
+    }
+  } else {
+    const existing = document.getElementById('unknownResolveBanner');
+    if (existing) existing.remove();
+  }
+}
+
+function renderAIMessages() {
+  const container = document.getElementById('aiMessages');
+  if (state.aiMessages.length === 0) {
+    container.innerHTML = '<div class="ai-status">点击 "✨ AI分析" 获取饮食建议，或直接在下方提问</div>';
+    return;
+  }
+  container.innerHTML = state.aiMessages.map(msg => {
+    const roleClass = msg.role === 'user' ? 'ai-user' : '';
+    const label = msg.role === 'user' ? '🧑 你' : '🤖 AI';
+    return `<div class="ai-msg ${roleClass}"><div class="label">${label}</div>${msg.content}</div>`;
+  }).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+function setDate(dir) {
+  const d = new Date(state.date + 'T12:00:00');
+  d.setDate(d.getDate() + dir);
+  state.date = d.toISOString().slice(0,10);
+  loadDiet(state.date).then(render);
+}
+
+function goToday() {
+  state.date = new Date().toISOString().slice(0,10);
+  loadDiet(state.date).then(render);
+}
+
+function parseAndAdd() {
+  const text = document.getElementById('rawTextInput').value.trim();
+  if (!text) return;
+  const parsed = parseDietText(text);
+  if (!parsed || parsed.length === 0) {
+    alert('未能识别有效的食物信息，请检查格式');
+    return;
+  }
+  for (const meal of parsed) {
+    if (!meal.meal || meal.meal === '加餐') {
+      meal.meal = '加餐';
+    }
+    const existing = state.meals.find(m => m.meal === meal.meal);
+    if (existing) {
+      existing.foods.push(...meal.foods);
+    } else {
+      state.meals.push(meal);
+    }
+  }
+  state.rawText = text;
+  saveDiet().then(() => {
+    render();
+    document.getElementById('rawTextInput').value = text;
+  });
+}
+
+function clearRawText() {
+  document.getElementById('rawTextInput').value = '';
+  state.rawText = '';
+}
+
+function addMeal() {
+  const names = ['早餐', '午餐', '晚餐', '加餐'];
+  const existing = state.meals.map(m => m.meal);
+  const available = names.filter(n => !existing.includes(n));
+  if (available.length === 0) {
+    alert('已有全部餐段');
+    return;
+  }
+  const name = prompt(`添加一餐 (${available.join('/')}):`, available[0]);
+  if (!name || !name.trim()) return;
+  if (existing.includes(name.trim())) {
+    alert('该餐段已存在');
+    return;
+  }
+  state.meals.push({ meal: name.trim(), foods: [] });
+  saveDiet().then(render);
+}
+
+function openAddFoodModal(mealIndex) {
+  addFoodTargetMeal = mealIndex;
+  document.getElementById('addFoodModalTitle').textContent = `添加食物 - ${state.meals[mealIndex].meal}`;
+  document.getElementById('addFoodName').value = '';
+  document.getElementById('addFoodAmount').value = '100';
+  document.getElementById('addFoodUnit').value = 'g';
+  document.getElementById('addFoodSuggestion').textContent = '';
+  document.getElementById('addFoodModal').classList.add('active');
+}
+
+function closeAddFoodModal() {
+  document.getElementById('addFoodModal').classList.remove('active');
+  addFoodTargetMeal = null;
+}
+
+function confirmAddFood() {
+  if (addFoodTargetMeal === null) return;
+  const name = document.getElementById('addFoodName').value.trim();
+  const amount = parseFloat(document.getElementById('addFoodAmount').value) || 100;
+  const unit = document.getElementById('addFoodUnit').value;
+  if (!name) { alert('请输入食物名称'); return; }
+
+  const grams = (unit !== 'g' && unit !== 'ml' && UNIT_CONVERSION[unit])
+    ? amount * (typeof UNIT_CONVERSION[unit] === 'object' ? 100 : UNIT_CONVERSION[unit])
+    : amount;
+
+  const found = matchFood(name);
+  if (found) {
+    const ratio = grams / 100;
+    const food = {
+      name: found.name,
+      weight: Math.round(grams * 10) / 10,
+      unit: 'g',
+      calories: Math.round(found.cal * ratio),
+      protein: Math.round(found.protein * ratio * 10) / 10,
+      fat: Math.round(found.fat * ratio * 10) / 10,
+      carbs: Math.round(found.carbs * ratio * 10) / 10,
+    };
+    state.meals[addFoodTargetMeal].foods.push(food);
+  } else {
+    state.meals[addFoodTargetMeal].foods.push({
+      name, weight: Math.round(grams * 10) / 10, unit: 'g', unknown: true
+    });
+  }
+  closeAddFoodModal();
+  saveDiet().then(render);
+}
+
+function deleteFood(mealIndex, foodIndex) {
+  state.meals[mealIndex].foods.splice(foodIndex, 1);
+  if (state.meals[mealIndex].foods.length === 0) {
+    state.meals.splice(mealIndex, 1);
+  }
+  saveDiet().then(render);
+}
+
+async function analyzeDiet() {
+  const btn = document.getElementById('analyzeBtn');
+  if (btn.classList.contains('loading')) return;
+  btn.classList.add('loading');
+  btn.textContent = '分析中...';
+  try {
+    const payload = {
+      meals: state.meals,
+      profile: state.profile,
+      date: state.date,
+    };
+    const res = await fetchWithAuth('/api/diet/analyze', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      if (res.status === 503) throw new Error('AI服务暂不可用');
+      throw new Error('分析失败');
+    }
+    const data = await res.json();
+    state.aiMessages.push({ role: 'assistant', content: data.result || data.message || '分析完成' });
+    renderAIMessages();
+  } catch (e) {
+    if (e.message === '请先登录') {
+      showError('请先登录进行AI分析');
+    } else {
+      state.aiMessages.push({ role: 'assistant', content: 'AI 服务暂不可用，请稍后再试' });
+      renderAIMessages();
+    }
+  }
+  btn.classList.remove('loading');
+  btn.textContent = '✨ AI分析';
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  const btn = document.getElementById('sendChatBtn');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  btn.textContent = '发送中...';
+  state.aiMessages.push({ role: 'user', content: text });
+  input.value = '';
+  renderAIMessages();
+  try {
+    const payload = {
+      message: text,
+      meals: state.meals,
+      profile: state.profile,
+      date: state.date,
+    };
+    const res = await fetchWithAuth('/api/diet/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      if (res.status === 503) throw new Error('AI服务暂不可用');
+      throw new Error('请求失败');
+    }
+    const data = await res.json();
+    state.aiMessages.push({ role: 'assistant', content: data.result || data.message || '...' });
+    renderAIMessages();
+  } catch (e) {
+    if (e.message === '请先登录') {
+      state.aiMessages.push({ role: 'assistant', content: '请先登录使用 AI 功能' });
+    } else {
+      state.aiMessages.push({ role: 'assistant', content: 'AI 服务暂不可用，请稍后再试' });
+    }
+    renderAIMessages();
+  }
+  btn.disabled = false;
+  btn.textContent = '发送';
+}
+
+async function resolveUnknowns() {
+  const unknowns = [];
+  for (let mi = 0; mi < state.meals.length; mi++) {
+    for (let fi = 0; fi < state.meals[mi].foods.length; fi++) {
+      const f = state.meals[mi].foods[fi];
+      if (f.unknown) {
+        unknowns.push({ mealIndex: mi, foodIndex: fi, name: f.name, weight: f.weight });
+      }
+    }
+  }
+  if (unknowns.length === 0) return;
+  try {
+    const res = await fetchWithAuth('/api/diet/parse', {
+      method: 'POST',
+      body: JSON.stringify({ foods: unknowns.map(u => ({ name: u.name, weight: u.weight })) })
+    });
+    if (!res.ok) {
+      if (res.status === 503) throw new Error('AI服务暂不可用');
+      throw new Error('解析失败');
+    }
+    const data = await res.json();
+    const parsedFoods = data.results || data.foods || [];
+    for (const pf of parsedFoods) {
+      const found = unknowns.find(u => u.name === pf.original_name || u.name === pf.name);
+      if (found) {
+        state.meals[found.mealIndex].foods[found.foodIndex] = {
+          name: pf.name,
+          weight: pf.weight || state.meals[found.mealIndex].foods[found.foodIndex].weight,
+          unit: 'g',
+          calories: pf.calories || 0,
+          protein: pf.protein || 0,
+          fat: pf.fat || 0,
+          carbs: pf.carbs || 0,
+        };
+      }
+    }
+    saveDiet().then(render);
+  } catch (e) {
+    if (e.message === '请先登录') {
+      showError('请先登录使用 AI 解析');
+    } else {
+      showError('AI 服务暂不可用，无法解析未知食物');
+    }
+  }
+}
+
+function openSettingsModal() {
+  document.getElementById('inputHeight').value = state.profile.height || '';
+  document.getElementById('inputWeight').value = state.profile.weight || '';
+  document.getElementById('inputGoal').value = state.profile.goal || 'maintain';
+  document.getElementById('settingsModal').classList.add('active');
+}
+
+function closeSettingsModal() {
+  document.getElementById('settingsModal').classList.remove('active');
+}
+
+function saveSettings() {
+  saveProfile();
+}
+
+function showError(msg) {
+  const div = document.createElement('div');
+  div.style.cssText = 'position:fixed;bottom:max(20px,env(safe-area-inset-bottom,20px));left:16px;right:16px;background:rgba(255,59,48,0.9);color:#fff;padding:12px 16px;border-radius:12px;font-size:14px;z-index:300;text-align:center;backdrop-filter:blur(20px);';
+  div.textContent = msg;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 3000);
+}
+
+init();
+</script>
+</body>
+</html>
