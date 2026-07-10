@@ -36,7 +36,17 @@ function parseFoodItem(text) {
   if (!match) {
     // 纯食物名（无数量），尝试匹配食物库
     const food = matchFood(text);
-    if (food) return { name: food.name, weight: 100, unit: "g", ...food };
+    if (food) {
+      return {
+        name: food.name,
+        weight: 100,
+        unit: "g",
+        calories: food.cal,
+        protein: food.protein,
+        fat: food.fat,
+        carbs: food.carbs,
+      };
+    }
     return null;
   }
 
