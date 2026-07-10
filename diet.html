@@ -460,7 +460,8 @@ async function loadDiet(date) {
     document.getElementById('rawTextInput').value = state.rawText;
   } catch (e) {
     if (e.message === '请先登录') {
-      showError('请先登录');
+      window.location.href = '/index.html';
+      return;
     }
     state.meals = [];
   }
@@ -505,28 +506,9 @@ function getTargets() {
   };
 }
 
-function summarizeMealsLocal(meals) {
-  const total = { calories: 0, protein: 0, fat: 0, carbs: 0 };
-  for (const meal of meals) {
-    for (const food of meal.foods) {
-      if (!food.unknown) {
-        total.calories += food.calories || 0;
-        total.protein += food.protein || 0;
-        total.fat += food.fat || 0;
-        total.carbs += food.carbs || 0;
-      }
-    }
-  }
-  total.calories = Math.round(total.calories);
-  total.protein = Math.round(total.protein * 10) / 10;
-  total.fat = Math.round(total.fat * 10) / 10;
-  total.carbs = Math.round(total.carbs * 10) / 10;
-  return total;
-}
-
 function render() {
   const targets = getTargets();
-  const total = summarizeMealsLocal(state.meals);
+  const total = summarizeMeals(state.meals);
   const unknownFoods = [];
   for (const meal of state.meals) {
     for (const food of meal.foods) {
@@ -713,9 +695,16 @@ function confirmAddFood() {
   const unit = document.getElementById('addFoodUnit').value;
   if (!name) { alert('请输入食物名称'); return; }
 
-  const grams = (unit !== 'g' && unit !== 'ml' && UNIT_CONVERSION[unit])
-    ? amount * (typeof UNIT_CONVERSION[unit] === 'object' ? 100 : UNIT_CONVERSION[unit])
-    : amount;
+  let grams = amount;
+  if (unit !== 'g' && unit !== 'ml' && UNIT_CONVERSION[unit]) {
+    const conv = UNIT_CONVERSION[unit];
+    if (typeof conv === 'object') {
+      const found = Object.entries(conv).find(([k]) => name.includes(k) || k.includes(name));
+      grams = found ? amount * found[1] : amount * 100;
+    } else {
+      grams = amount * conv;
+    }
+  }
 
   const found = matchFood(name);
   if (found) {
@@ -771,7 +760,8 @@ async function analyzeDiet() {
     renderAIMessages();
   } catch (e) {
     if (e.message === '请先登录') {
-      showError('请先登录进行AI分析');
+      window.location.href = '/index.html';
+      return;
     } else {
       state.aiMessages.push({ role: 'assistant', content: 'AI 服务暂不可用，请稍后再试' });
       renderAIMessages();
@@ -812,7 +802,8 @@ async function sendChat() {
     renderAIMessages();
   } catch (e) {
     if (e.message === '请先登录') {
-      state.aiMessages.push({ role: 'assistant', content: '请先登录使用 AI 功能' });
+      window.location.href = '/index.html';
+      return;
     } else {
       state.aiMessages.push({ role: 'assistant', content: 'AI 服务暂不可用，请稍后再试' });
     }
@@ -861,7 +852,8 @@ async function resolveUnknowns() {
     saveDiet().then(render);
   } catch (e) {
     if (e.message === '请先登录') {
-      showError('请先登录使用 AI 解析');
+      window.location.href = '/index.html';
+      return;
     } else {
       showError('AI 服务暂不可用，无法解析未知食物');
     }
