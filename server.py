@@ -3,6 +3,7 @@ import json
 import sqlite3
 import hashlib
 import secrets
+import requests as http_requests
 from datetime import datetime, timedelta
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.staticfiles import StaticFiles
@@ -211,6 +212,34 @@ def save_diet(date: str, req: DietRequest, user_id: int = Depends(get_current_us
     conn.commit()
     conn.close()
     return {"status": "ok"}
+
+AI_BASE = "http://localhost:20128/v1/chat/completions"
+AI_MODEL = "auto/best-fast"
+
+SYSTEM_PROMPTS = {
+    "parse": "你是一个营养分析助手。用户会输入食物名称和份量，请返回JSON数组，每项包含 name(中文名), weight_g(克), calories(千卡), protein_g, fat_g, carbs_g。只返回JSON，不要其他文字。如果无法识别某食物，返回 {\"unknown\": true, \"name\": \"...\"}。",
+    "analyze": "你是一个健身与营养顾问。根据用户的饮食数据和身体数据，给出分析和建议，包括：热量是否达标、碳蛋脂比例是否合理、改进建议。语气专业但友好，200字以内。",
+    "chat": "你是一个健身与营养顾问，回答用户关于训练、饮食、恢复等全部健身话题的问题。基于科学依据给出建议，语气友好专业。"
+}
+
+class AIRequest(BaseModel):
+    messages: list
+
+@app.post("/api/diet/{action}")
+def diet_ai(action: str, req: AIRequest, user_id: int = Depends(get_current_user)):
+    if action not in SYSTEM_PROMPTS:
+        raise HTTPException(status_code=404)
+    system_prompt = SYSTEM_PROMPTS[action]
+    payload = {
+        "model": AI_MODEL,
+        "messages": [{"role": "system", "content": system_prompt}] + req.messages,
+        "temperature": 0.7
+    }
+    try:
+        resp = http_requests.post(AI_BASE, json=payload, timeout=30)
+        return resp.json()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"AI 服务暂不可用: {str(e)}")
 
 @app.get("/api/records")
 def get_records(user_id: int = Depends(get_current_user)):
