@@ -217,7 +217,8 @@ def save_diet(date: str, req: DietRequest, user_id: int = Depends(get_current_us
     conn.close()
     return {"status": "ok"}
 
-AI_BASE = "http://localhost:20128/v1/chat/completions"
+AI_HOST = os.environ.get("AI_HOST", "localhost")
+AI_BASE = f"http://{AI_HOST}:20128/v1/chat/completions"
 AI_MODEL = "auto/best-fast"
 
 SYSTEM_PROMPTS = {
@@ -247,7 +248,7 @@ def call_ai(action: str, req, user_id):
     messages = [{"role": "system", "content": system_prompt}]
     content = json.dumps(req.model_dump(exclude_none=True), ensure_ascii=False)
     messages.append({"role": "user", "content": content})
-    payload = {"model": AI_MODEL, "messages": messages, "temperature": 0.7}
+    payload = {"model": AI_MODEL, "messages": messages, "temperature": 0.7, "stream": False}
     try:
         resp = http_requests.post(AI_BASE, json=payload, timeout=30)
         result = resp.json()
