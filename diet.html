@@ -408,6 +408,10 @@ async function fetchWithAuth(url, options = {}) {
 }
 
 async function init() {
+  if (!localStorage.getItem('fitness_token')) {
+    window.location.href = '/index.html';
+    return;
+  }
   try { await loadProfile(); } catch (e) {}
   try { await loadDiet(state.date); } catch (e) { console.error('loadDiet error', e); }
   render();
@@ -475,6 +479,11 @@ async function saveDiet() {
     });
     if (!res.ok) throw new Error('保存失败');
   } catch (e) {
+    if (e.message === '请先登录') {
+      showError('登录已过期，请重新登录');
+      setTimeout(() => { window.location.href = '/index.html'; }, 1500);
+      return;
+    }
     console.error('saveDiet error:', e);
   }
 }
@@ -632,7 +641,15 @@ function parseAndAdd() {
     alert('未能识别有效的食物信息，请检查格式');
     return;
   }
-  for (const meal of parsed) {
+  parsed.forEach(meal => {
+    meal.foods = meal.foods.filter(f => f !== null);
+  });
+  const validMeals = parsed.filter(m => m.foods.length > 0);
+  if (validMeals.length === 0) {
+    alert('未能识别有效的食物信息，请检查格式');
+    return;
+  }
+  for (const meal of validMeals) {
     if (!meal.meal || meal.meal === '加餐') {
       meal.meal = '加餐';
     }

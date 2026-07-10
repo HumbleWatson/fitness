@@ -129,7 +129,7 @@ class ProfileRequest(BaseModel):
     goal: Optional[str] = None
 
 class DietRequest(BaseModel):
-    meals: str = "[]"
+    meals: list = []
     raw_text: str = ""
 
 class SyncRequest(BaseModel):
@@ -171,7 +171,11 @@ def get_profile(user_id: int = Depends(get_current_user)):
     conn = get_db()
     row = conn.execute("SELECT height, weight, goal FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
-    return {"height": row["height"], "weight": row["weight"], "goal": row["goal"]}
+    return {
+        "height": float(row["height"]) if row["height"] else None,
+        "weight": float(row["weight"]) if row["weight"] else None,
+        "goal": row["goal"]
+    }
 
 @app.put("/api/profile")
 def update_profile(req: ProfileRequest, user_id: int = Depends(get_current_user)):
@@ -207,7 +211,7 @@ def save_diet(date: str, req: DietRequest, user_id: int = Depends(get_current_us
            VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(user_id, date)
            DO UPDATE SET meals=excluded.meals, raw_text=excluded.raw_text, updated_at=excluded.updated_at""",
-        (user_id, date, req.meals, req.raw_text, datetime.now().isoformat())
+        (user_id, date, json.dumps(req.meals), req.raw_text, datetime.now().isoformat())
     )
     conn.commit()
     conn.close()
@@ -222,22 +226,33 @@ SYSTEM_PROMPTS = {
     "chat": "你是一个健身与营养顾问，回答用户关于训练、饮食、恢复等全部健身话题的问题。基于科学依据给出建议，语气友好专业。"
 }
 
-class AIRequest(BaseModel):
-    messages: list
+class GenericRequest(BaseModel):
+    class Config:
+        extra = "allow"
 
-@app.post("/api/diet/{action}")
-def diet_ai(action: str, req: AIRequest, user_id: int = Depends(get_current_user)):
-    if action not in SYSTEM_PROMPTS:
-        raise HTTPException(status_code=404)
+@app.post("/api/diet/parse")
+def diet_parse(req: GenericRequest, user_id: int = Depends(get_current_user)):
+    return call_ai("parse", req, user_id)
+
+@app.post("/api/diet/analyze")
+def diet_analyze(req: GenericRequest, user_id: int = Depends(get_current_user)):
+    return call_ai("analyze", req, user_id)
+
+@app.post("/api/diet/chat")
+def diet_chat(req: GenericRequest, user_id: int = Depends(get_current_user)):
+    return call_ai("chat", req, user_id)
+
+def call_ai(action: str, req, user_id):
     system_prompt = SYSTEM_PROMPTS[action]
-    payload = {
-        "model": AI_MODEL,
-        "messages": [{"role": "system", "content": system_prompt}] + req.messages,
-        "temperature": 0.7
-    }
+    messages = [{"role": "system", "content": system_prompt}]
+    content = json.dumps(req.model_dump(exclude_none=True), ensure_ascii=False)
+    messages.append({"role": "user", "content": content})
+    payload = {"model": AI_MODEL, "messages": messages, "temperature": 0.7}
     try:
         resp = http_requests.post(AI_BASE, json=payload, timeout=30)
-        return resp.json()
+        result = resp.json()
+        content = result["choices"][0]["message"]["content"]
+        return {"result": content}
     except Exception as e:
         raise HTTPException(status_code=503, detail=f"AI 服务暂不可用: {str(e)}")
 
