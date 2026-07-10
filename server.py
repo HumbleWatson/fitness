@@ -52,6 +52,18 @@ def init_db():
             UNIQUE(user_id, date)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS diet_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            date TEXT NOT NULL,
+            meals TEXT NOT NULL DEFAULT '[]',
+            raw_text TEXT DEFAULT '',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, date)
+        )
+    """)
     conn.commit()
     conn.close()
 
@@ -115,6 +127,10 @@ class ProfileRequest(BaseModel):
     weight: Optional[float] = None
     goal: Optional[str] = None
 
+class DietRequest(BaseModel):
+    meals: str = "[]"
+    raw_text: str = ""
+
 class SyncRequest(BaseModel):
     data: dict
     last_sync: Optional[str] = None
@@ -167,6 +183,32 @@ def update_profile(req: ProfileRequest, user_id: int = Depends(get_current_user)
         sets = ", ".join(f"{k}=?" for k in updates)
         conn.execute(f"UPDATE users SET {sets} WHERE id=?", list(updates.values()) + [user_id])
         conn.commit()
+    conn.close()
+    return {"status": "ok"}
+
+@app.get("/api/diet/{date}")
+def get_diet(date: str, user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    row = conn.execute(
+        "SELECT meals, raw_text FROM diet_records WHERE user_id=? AND date=?",
+        (user_id, date)
+    ).fetchone()
+    conn.close()
+    if row:
+        return {"date": date, "meals": json.loads(row["meals"]), "raw_text": row["raw_text"]}
+    return {"date": date, "meals": [], "raw_text": ""}
+
+@app.put("/api/diet/{date}")
+def save_diet(date: str, req: DietRequest, user_id: int = Depends(get_current_user)):
+    conn = get_db()
+    conn.execute(
+        """INSERT INTO diet_records (user_id, date, meals, raw_text, updated_at)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(user_id, date)
+           DO UPDATE SET meals=excluded.meals, raw_text=excluded.raw_text, updated_at=excluded.updated_at""",
+        (user_id, date, req.meals, req.raw_text, datetime.now().isoformat())
+    )
+    conn.commit()
     conn.close()
     return {"status": "ok"}
 
