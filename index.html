@@ -673,14 +673,6 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
-        .nav-row {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            margin-top: -8px;
-            margin-bottom: 16px;
-        }
-
         .user-bar {
             display: flex;
             gap: 8px;
@@ -738,16 +730,11 @@
         <h1>健身日记</h1>
         <div class="user-bar">
             <span class="user-name" id="userName"></span>
-            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.16</span>
+            <span style="font-size:11px;color:rgba(255,255,255,0.25);margin-right:4px">v1.17</span>
             <span class="sync-status" id="syncStatus" style="display:none"></span>
-        </div>
-    </div>
-    <div class="nav-row">
-        <div style="display:flex;gap:8px;">
             <a href="stats.html" class="nav-link">📊 分析</a>
-            <a href="diet.html" class="nav-link">🥗 饮食</a>
+            <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
         </div>
-        <button class="nav-link" id="authBtn" onclick="openAuthModal()">登录</button>
     </div>
     
     <div class="glass-card">
@@ -989,9 +976,18 @@
             syncStatus.classList.remove('syncing');
         }
 
-        // Service Worker
+        // Service Worker — 无感自动更新
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION);
+            navigator.serviceWorker.register('/sw.js?v=' + APP_VERSION).then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') {
+                            window.location.reload();
+                        }
+                    });
+                });
+            });
         }
 
         const exerciseDB = {

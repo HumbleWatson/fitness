@@ -30,6 +30,9 @@
         }
 
         .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 8px;
             min-height: 42px;
         }
@@ -47,10 +50,10 @@
 
         .nav-link {
             display: inline-block;
-            padding: 10px 16px;
+            padding: 8px 14px;
             background: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 12px;
+            border-radius: 10px;
             color: #fff;
             text-decoration: none;
             font-size: 14px;
@@ -62,11 +65,10 @@
             background: rgba(255, 255, 255, 0.12);
         }
 
-        .nav-row {
+        .user-bar {
             display: flex;
             gap: 8px;
-            margin-top: -8px;
-            margin-bottom: 16px;
+            align-items: center;
         }
 
         .filter-bar {
@@ -342,9 +344,9 @@
 <body>
     <div class="page-header">
         <h1>数据分析</h1>
-    </div>
-    <div class="nav-row">
-        <a href="index.html" class="nav-link">🏋️ 日记</a>
+        <div class="user-bar">
+            <a href="index.html" class="nav-link">🏋️ 日记</a>
+        </div>
     </div>
 
     <div class="filter-bar" id="filterBar">
@@ -763,6 +765,18 @@
         }
 
         renderAll();
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js?v=v1').then(reg => {
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'activated') window.location.reload();
+                    });
+                });
+            });
+        }
     </script>
 
     <div class="modal-overlay" id="muscleModal" onclick="if (event.target === this) this.classList.remove('show')">
